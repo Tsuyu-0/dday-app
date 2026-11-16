@@ -39,10 +39,10 @@ function helpSay(text,view){
     buttons:[[VIEW_LB[view]||"열어 보기",view||"home"],["알겠어","ok"]],onAct:function(a){ if(a!=="ok") api.petOpen(a); setOver(false); }});
   setTimeout(function(){ if(el.parentNode) el.remove(); },12000);
 }
-function say(line,idle,style,msOver){
+function say(line,idle,style,msOver,quiet){
   var ms=msOver||((T&&T.motion)||{}).bubbleMs||1500;
   var sz=stage.offsetHeight, bp=Z.bubPos(T,sz);
-  var cf=T._cfg||{}, vc=(T.babble&&T.babble!=="none"&&!cf.mute&&(!idle||T.idleVoice))?{type:T.babble,vol:cf.voiceVol==null?.6:cf.voiceVol,pitch:T.babblePitch||0,speed:T.babbleSpeed||1,delay:idle?0:170}:null;
+  var cf=T._cfg||{}, vc=(!quiet&&T.babble&&T.babble!=="none"&&!cf.mute&&(!idle||T.idleVoice))?{type:T.babble,vol:cf.voiceVol==null?.6:cf.voiceVol,pitch:T.babblePitch||0,speed:T.babbleSpeed||1,delay:idle?0:170}:null;
   Z.say(document.body,line,style||(idle?"thought":defBub),{bottom:8+sz-bp.fromTop+14+bp.dy,dx:bp.dx*(T.desk&&T.desk.flip?-1:1),clamp:true,maxWidth:Math.max(140,window.innerWidth-60),voice:vc},ms,idle);
 }
 function react(zone,px,py){
@@ -110,7 +110,7 @@ api.onPetToken(render);
 api.onPetPoke(function(){ var zs=Z.zonesFor(T||{}); react(zs[Math.floor(Math.random()*zs.length)]); });
 api.onPetSay(function(t){ if(!T) return; Z.react(stage,T,"head"); var c=T._cfg||{}; if(!c.mute) Z.sound("bell",c.volume); if(t&&typeof t==="object") helpSay(t.line,t.view); else helpSay(t,"events"); });
 /* 페어로 같이 떠 있을 때: 옆 캐릭터와 주고받는 대사 */
-if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms); });
+if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); });
 api.petToken().then(render);
 idleLoop();
 })();

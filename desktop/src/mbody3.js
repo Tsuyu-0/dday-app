@@ -301,17 +301,42 @@ function annDialog(a,presetWho,presetDate){
 }
 
 /* ---------- 페어 / 설정 ---------- */
-var DUO_DEF=["{A}: 오늘 뭐 했어?\n{B}: 너 기다렸지!","{A}: 배고프지 않아?\n{B}: 방금 그 말 기다렸어","{B}: 나 오늘 좀 멋있지?\n{A}: ...응, 쪼끔","{A}: {B}!\n{B}: 왜~\n{A}: 그냥 불러 봤어","{B}: 졸려...\n{A}: 조금만 더 버티자","{A}: 여기 화면 넓다\n{B}: 같이 있으니까 좁은데?","{A}: *두근두근\n{B}: 무슨 소리야?\n{A}: 아, 아무것도 아니야!","{B}: 우리 산책 갈래?\n{A}: 바탕화면 밖으로는 못 나가잖아\n{B}: 그럼 여기서 한 바퀴!","{A}: 오늘 날씨 어때?\n{B}: 너랑 있어서 맑음","{B}: *쾅!\n{A}: 깜짝이야!\n{B}: 헤헤 놀랐지","{A}: 일 열심히 하네\n{B}: 우리도 응원하자\n{A}: 화이팅!","{B}: 심심해~\n{A}: 그럼 나랑 놀자"];
+var DUO_DEF=[[[0,"오늘 뭐 했어?"],[1,"너 기다렸지!"]],[[0,"배고프지 않아?"],[1,"방금 그 말 기다렸어"]],[[1,"나 오늘 좀 멋있지?"],[0,"...응, 쪼끔"]],[[0,"{B}!"],[1,"왜~"],[0,"그냥 불러 봤어"]],[[1,"졸려..."],[0,"조금만 더 버티자"]],[[0,"여기 화면 넓다"],[1,"같이 있으니까 좁은데?"]],[[0,"두근두근","sfx"],[1,"무슨 소리야?"],[0,"아, 아무것도 아니야!"]],[[1,"우리 산책 갈래?"],[0,"바탕화면 밖으로는 못 나가잖아"],[1,"그럼 여기서 한 바퀴!"]],[[0,"오늘 날씨 어때?"],[1,"너랑 있어서 맑음"]],[[1,"쾅!","sfx"],[0,"깜짝이야!","shout"],[1,"헤헤 놀랐지"]],[[0,"일 열심히 하네"],[1,"우리도 응원하자"],[0,"화이팅!"]],[[1,"심심해~"],[0,"그럼 나랑 놀자"]]];
+var DLG_STY=[["","말풍선"],["sfx","효과음"],["shout","놀람"],["thought","생각"]];
+function defDialogs(){ return DUO_DEF.map(function(c){ return c.map(function(l){ return {w:l[0],t:l[1],s:l[2]||""}; }); }); }
+/* 예전 글자 방식(이름: 대사)으로 적어 둔 대화 → 칸 방식으로 옮겨요 */
+function talksToDialogs(p,ids){
+  var nm=ids.map(function(id){ var t=tokById(id)||{}; return [t.nick||"",t.name||""]; });
+  return String(p.talks||"").replace(/\r/g,"").split(/\n\s*\n/).map(function(bk){ var next=0;
+    return bk.split("\n").map(function(ln){ ln=ln.trim(); if(!ln) return null;
+      var m=/^([^:：]{1,16})[:：]\s*(.*)$/.exec(ln), w=null, txt=ln;
+      if(m){ var k=m[1].trim(); if(/^(\{A\}|A|1)$/i.test(k)||nm[0].indexOf(k)>=0) w=0; else if(/^(\{B\}|B|2)$/i.test(k)||(nm[1]&&nm[1].indexOf(k)>=0)) w=1; if(w!=null) txt=m[2]; }
+      if(w==null) w=next; next=1-w; var st=""; var pl=Z.parseLine(txt,"speech"); if(!pl.auto){ st=pl.style; txt=pl.text; }
+      return {w:w,t:txt,s:st}; }).filter(Boolean); }).filter(function(c){return c.length});
+}
+function pairDialogs(p,ids){ if(!p.dialogs&&p.talks&&p.talks.trim()){ p.dialogs=talksToDialogs(p,ids); delete p.talks; } return p.dialogs||null; }
+function dialogBox(p,ids,nmA,nmB,duoOn){
+  var D=pairDialogs(p,ids)||[], tA=tokById(ids[0]), tB=tokById(ids[1]), live=window.__TAURI__&&duoOn;
+  var who=function(w){ var t=w?tB:tA; return '<span class="av">'+(t?tokPreview(t):"")+'</span><span class="wn">'+esc(w?nmB:nmA)+"</span>"; };
+  var h='<div class="lbl" style="margin-top:4px">둘이 나누는 대화 <span class="note" style="font-weight:400">'+(D.length?D.length+"개 · 가끔 그중 하나를 골라 주고받아요":"아직 없어서 기본 대화 "+DUO_DEF.length+"개를 써요")+"</span></div>";
+  h+='<div class="dlgs">'+D.map(function(c,i){
+    return '<div class="dlg2" data-dlg="'+i+'"><div class="dlg2-h"><b>대화 '+(i+1)+"</b>"+(live?'<button class="lk" data-act="dlgplay" data-i="'+i+'">▶ 들어 보기</button>':"")+'<button class="ib" data-act="dlgdel" data-i="'+i+'" title="이 대화 지우기">'+X+"</button></div>"+
+      c.map(function(l,j){ var sty=DLG_STY.filter(function(x){return x[0]===(l.s||"")})[0]||DLG_STY[0];
+        return '<div class="dl-row'+(l.w?" b":"")+'"><button class="dl-who" data-act="dlwho" data-i="'+i+'" data-j="'+j+'" title="누르면 말하는 사람이 바뀌어요">'+who(l.w)+'</button><input class="in dl-t" data-dl="'+i+"|"+j+'" value="'+esc(l.t)+'" placeholder="대사"><button class="dl-sty s-'+(l.s||"speech")+'" data-act="dlsty" data-i="'+i+'" data-j="'+j+'" title="누르면 모양이 바뀌어요">'+sty[1]+'</button><button class="ib" data-act="dldel" data-i="'+i+'" data-j="'+j+'" title="이 줄 지우기">'+X+"</button></div>"; }).join("")+
+      '<button class="dl-add" data-act="dladd" data-i="'+i+'">＋ 한 마디</button></div>';
+  }).join("")+"</div>";
+  h+='<div class="chips" style="margin:2px 0 8px"><button data-act="dlauto"'+(p.duoAuto!==false?' class="on"':"")+'>저절로 대화하기 '+(p.duoAuto!==false?"켬":"끔")+'</button><button data-act="dlvoice"'+(p.duoVoice!==false?' class="on"':"")+'>대화할 때 말소리 '+(p.duoVoice!==false?"켬":"끔")+'</button></div>';
+  h+='<div class="btns"><button class="btn" data-act="dlgadd">＋ 대화 추가</button>'+(D.length?"":'<button class="btn" data-act="dlgdef">기본 대화 불러와서 고치기</button>')+(live?'<button class="btn" data-act="ptalk">아무 대화나 들어 보기</button>':"")+"</div>";
+  h+='<p class="note">말하는 사람 칩을 누르면 '+esc(nmA)+" ↔ "+esc(nmB)+"로 바뀌고, 오른쪽 모양 버튼을 누르면 말풍선 · 효과음 · 놀람 · 생각 순서로 바뀌어요. 대사 안의 {A} {B}는 두 사람 이름으로 바뀌어요.</p>";
+  return h;
+}
 function pairView(){
   var h='<div class="wrap"><div class="h1">페어</div><p class="lead">함께 묶어 둔 캐릭터들이에요. 기념일을 붙일 때 페어 단위로 고를 수 있어요.</p>';
   if(!S.pairs.length&&S.tokens.length>=2) h+='<div class="empty">아직 묶은 페어가 없어요.</div>';
   h+=S.pairs.map(function(p){
     var two=p.tokenIds.filter(function(id){return tokById(id)}).slice(0,2), duoOn=S.settings.duo===p.id, nmA=two[0]?(tokById(two[0]).nick||tokById(two[0]).name):"A", nmB=two[1]?(tokById(two[1]).nick||tokById(two[1]).name):"B";
     var duo=window.__TAURI__?'<div class="duo"><div class="duo-h"><b>바탕화면에 둘이 같이</b><span class="note">'+(two.length<2?"캐릭터를 두 명 고르면 켤 수 있어요":duoOn?"지금 "+esc(nmA)+" · "+esc(nmB)+" 둘이 나와 있어요":"켜면 바탕화면에 둘이 나란히 나와서 가끔 서로 이야기해요")+'</span><button class="btn'+(duoOn?"":" pri")+'" data-act="pduo"'+(two.length<2?" disabled":"")+'>'+(duoOn?"끄기":"같이 띄우기")+'</button></div>':'<div class="duo"><div class="duo-h"><b>둘이 나누는 대화</b><span class="note">PC 앱에서 둘을 바탕화면에 같이 띄우면 이 대화를 주고받아요</span></div>';
-    var blocks=String(p.talks||"").replace(/\r/g,"").split(/\n\s*\n/).filter(function(x){return x.trim()});
-    duo+='<div class="lbl" style="margin-top:4px">둘이 나누는 대화 <span class="note" style="font-weight:400">'+(blocks.length?blocks.length+"개 · 가끔 그중 하나를 골라 주고받아요":"아직 없어서 기본 대화 "+DUO_DEF.length+"개를 써요")+'</span></div><div class="ptks">'+blocks.map(function(bk,i){ return '<div class="ptk"><span class="ptk-n">'+(i+1)+'</span><textarea class="in duo-t" data-ptk="'+i+'" rows="'+Math.max(2,Math.min(6,bk.split("\n").length))+'">'+esc(bk)+'</textarea><button class="ib" data-act="ptkdel" data-i="'+i+'" title="이 대화 지우기">'+X+'</button></div>'; }).join("")+'</div>';
-    duo+='<div class="btns"><button class="btn" data-act="ptkadd">＋ 대화 추가</button>'+(blocks.length?"":'<button class="btn" data-act="ptkdef">기본 대화 불러와서 고치기</button>')+(window.__TAURI__&&duoOn?'<button class="btn" data-act="ptalk">지금 대화 들어 보기</button>':"")+'</div>';
-    duo+='<p class="note">칸 하나가 대화 하나예요. 한 줄에 한 마디씩 <b>이름: 대사</b>로 적고, 이름을 안 쓰면 번갈아 말해요. {A} {B}는 '+esc(nmA)+' · '+esc(nmB)+'로 바뀌고, 대사 앞에 *를 붙이면 효과음 글씨(예: '+esc(nmA)+': *쾅!)로 나와요.</p></div>';
+    duo+=dialogBox(p,two,nmA,nmB,duoOn)+'</div>';
     return '<div class="box" data-pair="'+p.id+'"><div class="box-t"><input class="in" data-pf="name" value="'+esc(p.name)+'" placeholder="페어 이름" style="font-weight:700;max-width:280px"><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+'</button></div><div class="mem">'+S.tokens.map(function(t){ return '<button data-mem="'+t.id+'"'+(p.tokenIds.indexOf(t.id)>=0?' class="on"':"")+'><span class="av" style="background:'+tint(t.color,.2)+'">'+tokPreview(t)+"</span>"+esc(t.nick||t.name)+"</button>"; }).join("")+"</div>"+duo+"</div>";
   }).join("");
   if(S.tokens.length<2) return h+'<div class="box"><p class="note">페어를 묶으려면 캐릭터가 두 명 이상 있어야 해요. 지금은 '+S.tokens.length+'명이에요.</p><div class="btns" style="margin-top:10px"><button class="btn pri" data-act="new">＋ 캐릭터 추가</button></div></div></div>';
@@ -731,10 +756,18 @@ app.addEventListener("click",function(e){
   if(a==="zshow"){ SHOWZ=!SHOWZ; b.classList.toggle("on",SHOWZ); var zs=$("#zst"); if(zs) zs.classList.toggle("show",SHOWZ); }
   if(a==="del") ask("'"+(t.nick||t.name||"이 캐릭터")+"'를 지울까요? 되돌릴 수 없어요.","지우기").then(function(ok){ if(!ok) return; var id=SEL; S.tokens=S.tokens.filter(function(z){return z.id!==id}); S.pairs.forEach(function(p){p.tokenIds=p.tokenIds.filter(function(z){return z!==id})}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="token"&&z.who.id===id); }); (S.events||[]).forEach(function(z){ if(z.who&&z.who.type==="token"&&z.who.id===id) z.who=null; if(z.star===id) z.star=null; }); if(S.settings.main===id){ S.settings.main=null; setCfg("main",null); } SEL=null; SUB="basic"; saveSoon(true); render(); toast("지웠어요"); });
   if(a==="pduo"){ var pd=pairOf(b); setCfg("duo",S.settings.duo===pd.id?"":pd.id); saveSoon(true); render(); toast(S.settings.duo?"바탕화면에 둘이 같이 나와요":"한 명만 나와요"); return; }
-  if(a==="ptkadd"||a==="ptkdel"||a==="ptkdef"){ var pq=pairOf(b), bl=String(pq.talks||"").split(/\n\s*\n/).filter(function(x){return x.trim()});
-    if(a==="ptkdel") bl.splice(+b.dataset.i,1); if(a==="ptkdef") bl=DUO_DEF.slice();
-    pq.talks=bl.join("\n\n"); saveSoon(true); render();
-    if(a==="ptkadd"){ var tas=$$('[data-pair="'+pq.id+'"] .ptks textarea'); var box0=$('[data-pair="'+pq.id+'"] .ptks'); if(box0){ box0.insertAdjacentHTML("beforeend",'<div class="ptk"><span class="ptk-n">'+(tas.length+1)+'</span><textarea class="in duo-t" data-ptk="'+tas.length+'" rows="2" placeholder="이름: 대사"></textarea></div>'); var nt=$('[data-ptk="'+tas.length+'"]',box0); if(nt) nt.focus(); } }
+  if(a==="dlauto"||a==="dlvoice"){ var pz=pairOf(b), kz=a==="dlauto"?"duoAuto":"duoVoice"; pz[kz]=pz[kz]===false; saveSoon(true); render(); toast(a==="dlauto"?(pz.duoAuto?"가끔 저절로 대화해요":"저절로 대화하지 않아요 · 우클릭 [둘이 이야기하기]로는 할 수 있어요"):(pz.duoVoice?"대화할 때 말소리가 나요":"대화는 소리 없이 말풍선만 떠요")); return; }
+  if(/^(dlgadd|dlgdel|dlgdef|dladd|dldel|dlwho|dlsty|dlgplay)$/.test(a)){ var pq=pairOf(b), ids2=pq.tokenIds.filter(function(id){return tokById(id)}).slice(0,2), D2=pairDialogs(pq,ids2)||[], i2=+b.dataset.i, j2=+b.dataset.j, c2=D2[i2];
+    if(a==="dlgplay"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",{i:i2,at:Date.now()}); },300); return; }
+    if(a==="dlgadd") D2.push([{w:0,t:"",s:""},{w:1,t:"",s:""}]);
+    if(a==="dlgdef") D2=defDialogs();
+    if(a==="dlgdel") D2.splice(i2,1);
+    if(a==="dladd"&&c2){ var lw=c2.length?c2[c2.length-1].w:1; c2.push({w:1-lw,t:"",s:""}); }
+    if(a==="dldel"&&c2){ c2.splice(j2,1); if(!c2.length) D2.splice(i2,1); }
+    if(a==="dlwho"&&c2&&c2[j2]) c2[j2].w=1-c2[j2].w;
+    if(a==="dlsty"&&c2&&c2[j2]){ var ks=DLG_STY.map(function(x){return x[0]}); c2[j2].s=ks[(ks.indexOf(c2[j2].s||"")+1)%ks.length]; }
+    pq.dialogs=D2; delete pq.talks; saveSoon(true); render();
+    if(a==="dladd"||a==="dlgadd"){ var ii=a==="dlgadd"?D2.length-1:i2, rows=$$('[data-pair="'+pq.id+'"] [data-dlg="'+ii+'"] .dl-t'), tgt=a==="dlgadd"?rows[0]:rows[rows.length-1]; if(tgt) tgt.focus(); }
     return; }
   if(a==="ptalk"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",Date.now()); },300); return; }
   if(a==="pnew"){ S.pairs.push({id:uid("p"),name:"",tokenIds:[]}); saveSoon(true); render(); }
@@ -753,7 +786,7 @@ function pairOf(el){ var id=el.closest("[data-pair]").dataset.pair; return S.pai
 app.addEventListener("input",function(e){
   var el=e.target, t=cur(); if(el.type==="range") fillRange(el);
   if(el.dataset.pf){ pairOf(el)[el.dataset.pf]=el.value; saveSoon(); return; }
-  if(el.dataset.ptk!=null){ var pk=pairOf(el); pk.talks=$$("[data-ptk]",el.closest("[data-pair]")).map(function(x){return x.value.replace(/\n\s*\n/g,"\n").trim()}).filter(Boolean).join("\n\n"); saveSoon(); return; }
+  if(el.dataset.dl){ var pd2=pairOf(el), ij=el.dataset.dl.split("|"), ln2=pd2.dialogs&&pd2.dialogs[+ij[0]]&&pd2.dialogs[+ij[0]][+ij[1]]; if(ln2){ ln2.t=el.value; saveSoon(); } return; }
   if(el.id==="ag-memo"){ S.notes=S.notes||{}; if(el.value.trim()) S.notes[DAYSEL]=el.value; else delete S.notes[DAYSEL]; saveSoon(); var c0=$('.dc[data-day="'+DAYSEL+'"]'); if(c0){ var mm=$(".memo2",c0); if(el.value.trim()&&!mm){ c0.insertAdjacentHTML("beforeend",'<span class="memo2"></span>'); } if(!el.value.trim()&&mm) mm.remove(); } return; }
   if(el.dataset.ln){ var a=el.dataset.ln.split("|"), arr=getLines(t,a[0]), p0=Z.parseLine(arr[+a[1]],lineDef(t,a[0])); arr[+a[1]]=p0.auto?el.value:Z.composeLine(p0.style,el.value); saveSoon(); return; }
   if(el.id==="b-y"||el.id==="b-x"){ t.bubblePos=t.bubblePos||{}; var bv=+el.value; t.bubblePos[el.id==="b-y"?"y":"x"]=bv; $("#"+el.id+"-v").textContent=el.id==="b-y"?bubLbl(bv,"위","아래"):bubLbl(bv,"오른쪽","왼쪽"); saveSoon(); clearTimeout(window._bubT); window._bubT=setTimeout(function(){ var tk=$("#zst .tok"); if(tk) say(tk,"여기쯤 떠요",false,t,"speech"); },120); return; }

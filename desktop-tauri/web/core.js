@@ -191,24 +191,32 @@
   setInterval(function () { if (!S) return; var d = A.ymd(new Date()); if (d !== lastDay) { lastDay = d; syncPets(); pushToManager(); } }, 30000);
 
   /* ---------- 둘이 나누는 대화 ---------- */
-  var DEF_TALKS = "{A}: 오늘 뭐 했어?\n{B}: 너 기다렸지!\n\n{A}: 배고프지 않아?\n{B}: 방금 그 말 기다렸어\n\n{B}: 나 오늘 좀 멋있지?\n{A}: ...응, 쪼끔\n\n{A}: {B}!\n{B}: 왜~\n{A}: 그냥 불러 봤어\n\n{B}: 졸려...\n{A}: 조금만 더 버티자\n\n{A}: 여기 화면 넓다\n{B}: 같이 있으니까 좁은데?\n\n{A}: *두근두근\n{B}: 무슨 소리야?\n{A}: 아, 아무것도 아니야!\n\n{B}: 우리 산책 갈래?\n{A}: 바탕화면 밖으로는 못 나가잖아\n{B}: 그럼 여기서 한 바퀴!\n\n{A}: 오늘 날씨 어때?\n{B}: 너랑 있어서 맑음\n\n{B}: *쾅!\n{A}: 깜짝이야!\n{B}: 헤헤 놀랐지\n\n{A}: 일 열심히 하네\n{B}: 우리도 응원하자\n{A}: 화이팅!\n\n{B}: 심심해~\n{A}: 그럼 나랑 놀자";
+  var DEF_DIALOGS = [[[0, "오늘 뭐 했어?"], [1, "너 기다렸지!"]], [[0, "배고프지 않아?"], [1, "방금 그 말 기다렸어"]], [[1, "나 오늘 좀 멋있지?"], [0, "...응, 쪼끔"]], [[0, "{B}!"], [1, "왜~"], [0, "그냥 불러 봤어"]], [[1, "졸려..."], [0, "조금만 더 버티자"]], [[0, "여기 화면 넓다"], [1, "같이 있으니까 좁은데?"]], [[0, "두근두근", "sfx"], [1, "무슨 소리야?"], [0, "아, 아무것도 아니야!"]], [[1, "우리 산책 갈래?"], [0, "바탕화면 밖으로는 못 나가잖아"], [1, "그럼 여기서 한 바퀴!"]], [[0, "오늘 날씨 어때?"], [1, "너랑 있어서 맑음"]], [[1, "쾅!", "sfx"], [0, "깜짝이야!", "shout"], [1, "헤헤 놀랐지"]], [[0, "일 열심히 하네"], [1, "우리도 응원하자"], [0, "화이팅!"]], [[1, "심심해~"], [0, "그럼 나랑 놀자"]]];
   function nameOf(id) { var t = tok(id); return t ? (t.nick || t.name || "") : ""; }
-  function parseTalks(text, ids) {
-    var nA = nameOf(ids[0]), nB = nameOf(ids[1]);
-    var who = function (k) { k = k.trim(); if (!k) return null; if (k === nA || k === (tok(ids[0]) || {}).name || /^(A|1)$/i.test(k)) return 0; if (k === nB || k === (tok(ids[1]) || {}).name || /^(B|2)$/i.test(k)) return 1; return null; };
+  var PREFIX = { sfx: "*", shout: "!", thought: "(" };
+  function line(w, t, sty, nA, nB) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t) return null; return { w: w ? 1 : 0, t: PREFIX[sty] ? PREFIX[sty] + t + (sty === "thought" ? ")" : "") : t }; }
+  /* 예전 글자 방식(이름: 대사) */
+  function parseTalks(text, ids, nA, nB) {
+    var names = ids.map(function (id) { var t = tok(id) || {}; return [t.nick || "", t.name || ""]; });
     return String(text || "").replace(/\r/g, "").split(/\n\s*\n/).map(function (block) {
       var next = 0;
       return block.split("\n").map(function (ln) {
         ln = ln.trim(); if (!ln) return null;
-        var m = /^([^:：]{1,16})[:：]\s*(.+)$/.exec(ln), w = m ? who(m[1]) : null, txt = m && w != null ? m[2] : ln;
+        var m = /^([^:：]{1,16})[:：]\s*(.*)$/.exec(ln), w = null, txt = ln;
+        if (m) { var k = m[1].trim(); if (/^(\{A\}|A|1)$/i.test(k) || names[0].indexOf(k) >= 0) w = 0; else if (/^(\{B\}|B|2)$/i.test(k) || names[1].indexOf(k) >= 0) w = 1; if (w != null) txt = m[2]; }
         if (w == null) w = next; next = 1 - w;
-        return { w: w, t: txt.replace(/\{A\}/g, nA).replace(/\{B\}/g, nB) };
+        return line(w, txt, "", nA, nB);
       }).filter(Boolean);
     }).filter(function (c) { return c.length; });
   }
   function talksFor(d) {
-    var list = parseTalks(d.p.talks && d.p.talks.trim() ? d.p.talks : DEF_TALKS, d.ids);
-    // 페어 기념일이 다가오면 그 얘기도
+    var nA = nameOf(d.ids[0]), nB = nameOf(d.ids[1]), list;
+    var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? line(l[0], l[1], l[2], nA, nB) : line(l.w, l.t, l.s, nA, nB); }).filter(Boolean); };
+    if (Array.isArray(d.p.dialogs) && d.p.dialogs.length) list = d.p.dialogs.map(conv);
+    else if (d.p.talks && d.p.talks.trim()) list = parseTalks(d.p.talks, d.ids, nA, nB);
+    else list = DEF_DIALOGS.map(conv);
+    list = list.filter(function (c) { return c.length; });
+    var base = list.length;
     try {
       A.upcoming(S).filter(function (x) { return x.n.days >= 0 && x.n.days <= 14 && x.a.who && x.a.who.type === "pair" && x.a.who.id === d.p.id; }).slice(0, 1).forEach(function (x) {
         var tt = x.n.label && x.n.label !== x.a.title ? x.a.title + " " + x.n.label : x.a.title;
@@ -216,27 +224,32 @@
         list.push(c, c);
       });
     } catch (e) {}
+    list.base = base;
     return list;
   }
-  var talking = false, lastTalk = -1;
-  function playTalk() {
-    var d = duoPair(); if (talking || !d || !P.pet.win || !P.pet2.win || !P.pet.pick || !P.pet2.pick) return false;
+  var talking = false, lastTalk = -1, talkGen = 0;
+  function playTalk(only) {
+    var d = duoPair(); if (!d || !P.pet.win || !P.pet2.win || !P.pet.pick || !P.pet2.pick) return false;
+    if (talking && only == null) return false;
     var list = talksFor(d); if (!list.length) return false;
-    var i = Math.floor(Math.random() * list.length); if (list.length > 1 && i === lastTalk) i = (i + 1) % list.length; lastTalk = i;
+    var i = Math.floor(Math.random() * list.length); if (list.length > 1 && i === lastTalk) i = (i + 1) % list.length;
+    if (only != null && only < list.base) i = only; lastTalk = i;
+    talkGen++; var gen = talkGen;
     var conv = list[i], lab = {}; lab[P.pet.pick.id] = "pet"; lab[P.pet2.pick.id] = "pet2";
     talking = true;
     var step = function (k) {
+      if (gen !== talkGen) return;
       if (k >= conv.length || !P.pet.win || !P.pet2.win) { talking = false; return; }
-      var line = conv[k], label = lab[d.ids[line.w]] || (line.w ? "pet2" : "pet"), ms = Math.min(4200, Math.max(1700, 900 + line.t.length * 90));
-      sendTo(label, "pet:line", { text: line.t, ms: ms });
+      var ln = conv[k], label = lab[d.ids[ln.w]] || (ln.w ? "pet2" : "pet"), ms = Math.min(4200, Math.max(1700, 900 + ln.t.length * 90));
+      sendTo(label, "pet:line", { text: ln.t, ms: ms, quiet: d.p.duoVoice === false });
       setTimeout(function () { step(k + 1); }, ms + 350);
     };
     step(0);
     return true;
   }
   // 가끔 저절로 (평균 2~3분에 한 번)
-  setInterval(function () { if (S && !S.settings.allHidden && Math.random() < 0.12) playTalk(); }, 20000);
-  handlers["pet:tap"] = function () { if (Math.random() < 0.3) setTimeout(playTalk, 1700); };
+  setInterval(function () { var d = S && duoPair(); if (d && !S.settings.allHidden && d.p.duoAuto !== false && Math.random() < 0.12) playTalk(); }, 20000);
+  handlers["pet:tap"] = function () { var d = duoPair(); if (d && d.p.duoAuto !== false && Math.random() < 0.3) setTimeout(playTalk, 1700); };
 
   handlers["pet:token"] = function (from) { return petData(from || "pet"); };
   handlers["pet:dragend"] = function (from) { saveFoot(from || "pet"); };
@@ -377,7 +390,7 @@
   handlers["settings:set"] = function (k, v) {
     if (k === "pinned") return setPinned(v);
     S.settings[k] = v; persist();
-    if (k === "talkNow") { playTalk(); return; }
+    if (k === "talkNow") { playTalk(v && typeof v === "object" && typeof v.i === "number" ? v.i : null); return; }
     if (["allHidden", "clickThrough", "mute", "volume", "voiceVol", "main", "annivSwap", "annivLead", "duo"].indexOf(k) >= 0) syncPets();
     if (k === "annivNotify") checkReminders();
     if (k === "launchAtLogin") applyLogin();
