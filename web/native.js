@@ -38,6 +38,18 @@
     return out.slice(0, 6);
   }
 
+  /* 폰 화면 위 캐릭터가 할 말: 그 캐릭터의 대사 + 다가오는 기념일 */
+  function ovData(S, t, first) {
+    if (!t) return null;
+    var Z = window.Zones, out = [], clean = function (x) { if (!x) return ""; var p = Z && Z.parseLine ? Z.parseLine(x, "speech") : { text: x }; return String(p.text || "").split("//")[0].trim(); };
+    (t.lines || []).forEach(function (x) { out.push(clean(x)); });
+    Object.keys(t.zones || {}).forEach(function (k) { ((t.zones[k] || {}).lines || []).forEach(function (x) { out.push(clean(x)); }); });
+    (t.idleLines || []).forEach(function (x) { out.push(clean(x)); });
+    var greet = "";
+    if (first && first.n) { var a = first.a, n = first.n; var al = (a.lines || []).filter(Boolean); greet = n.days === 0 && al.length ? clean(al[0]) : AN.defaultLine(S, a, n); out.push(AN.defaultLine(S, a, n)); }
+    return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet };
+  }
+
   /* 위젯에 들어갈 캐릭터 그림: 파츠를 순서대로 겹쳐 한 장으로 */
   function loadImg(src) { return new Promise(function (res) { if (!src) return res(null); var i = new Image(); i.onload = function () { res(i); }; i.onerror = function () { res(null); }; i.src = src; }); }
   function charImage(t) {
@@ -89,7 +101,7 @@
     var its = items(S), first = AN.upcoming(S).filter(function (x) { return x.n && x.n.days >= 0; })[0];
     var who = first && tok(S, AN.starOf(S, first.a)) || tok(S, (S.settings || {}).main) || (S.tokens || [])[0];
     var line = first ? AN.defaultLine(S, first.a, first.n) : "";
-    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "" };
+    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first) };
     var key = JSON.stringify([data, who && who.id, who && (who.img && who.img.src || "").length, who && Object.keys(who.parts || {}).length]);
     if (key !== last) {
       last = key;
@@ -97,6 +109,14 @@
     }
     schedule(S);
   }
+
+  /* 폰 화면 위 캐릭터 켜고 끄기 (설정 화면에서 써요) */
+  window.ddOverlay = {
+    status: function () { return Widget.overlayStatus().catch(function () { return { granted: false, running: false }; }); },
+    permission: function () { return Widget.overlayPermission(); },
+    start: function () { last = null; getState().then(function (s) { refresh(s); }); return Widget.overlayStart(); },
+    stop: function () { return Widget.overlayStop(); }
+  };
 
   /* 새 버전 확인: 앱에 들어 있는 build.json 번호 ↔ GitHub 최신 릴리스 */
   var myBuild = 0;

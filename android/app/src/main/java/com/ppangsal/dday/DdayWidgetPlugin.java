@@ -1,7 +1,11 @@
 package com.ppangsal.dday;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.provider.Settings;
+import androidx.core.content.ContextCompat;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -31,6 +35,42 @@ public class DdayWidgetPlugin extends Plugin {
             } catch (Exception e) { /* 그림이 없어도 위젯은 그려요 */ }
         }
         DdayWidget.updateAll(ctx);
+        if (OverlayService.running) { try { ctx.startService(new Intent(ctx, OverlayService.class).setAction(OverlayService.ACT_REFRESH)); } catch (Exception e) { } }
+        call.resolve(new JSObject());
+    }
+
+    /* ---- 폰 화면 위 캐릭터 ---- */
+    @PluginMethod
+    public void overlayStatus(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("granted", OverlayService.canDraw(getContext()));
+        r.put("running", OverlayService.running);
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void overlayPermission(PluginCall call) {
+        Context ctx = getContext();
+        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try { ctx.startActivity(i); } catch (Exception e) { }
+        call.resolve(new JSObject());
+    }
+
+    @PluginMethod
+    public void overlayStart(PluginCall call) {
+        Context ctx = getContext();
+        if (!OverlayService.canDraw(ctx)) { JSObject r = new JSObject(); r.put("ok", false); call.resolve(r); return; }
+        ctx.getSharedPreferences(DdayWidget.PREFS, Context.MODE_PRIVATE).edit().putBoolean("overlayOn", true).apply();
+        ContextCompat.startForegroundService(ctx, new Intent(ctx, OverlayService.class));
+        JSObject r = new JSObject(); r.put("ok", true); call.resolve(r);
+    }
+
+    @PluginMethod
+    public void overlayStop(PluginCall call) {
+        Context ctx = getContext();
+        ctx.getSharedPreferences(DdayWidget.PREFS, Context.MODE_PRIVATE).edit().putBoolean("overlayOn", false).apply();
+        ctx.stopService(new Intent(ctx, OverlayService.class));
         call.resolve(new JSObject());
     }
 }

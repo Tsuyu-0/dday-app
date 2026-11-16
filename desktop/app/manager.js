@@ -195,6 +195,16 @@ var PERSONAS=[["sweet","다정","잘 웃고 하트를 날려요","hop","heart","
 var LGSEL=null;
 var UPD=null;
 window.ddShowUpdate=function(info){ UPD=info; if(info&&info.newer) render(); };
+/* 폰(안드로이드) 화면 위에 캐릭터 띄우기 */
+function ovBox(){
+  if(!window.ddOverlay) return "";
+  return '<div class="box"><div class="box-t">폰 화면에 캐릭터 띄우기</div><p class="note" style="margin-bottom:10px">다른 앱을 쓰는 중에도 캐릭터가 화면 위에 떠 있어요. 끌어서 옮기고, 누르면 말풍선으로 한마디 해요. 길게 누르면 [앱 열기 · 숨기기]가 나와요. 나와 있는 동안 알림창에 작은 알림이 하나 있어요.</p><div class="btns" id="ovbtns"><span class="note">확인하는 중…</span></div><p class="note" style="margin-top:8px">캐릭터가 저절로 사라지면 휴대폰 설정 → 애플리케이션 → 기념일 D-day → 배터리를 <b>제한 없음</b>으로 바꿔 주세요.</p></div>';
+}
+function ovSync(){
+  if(!window.ddOverlay) return; window.ddOverlay.status().then(function(st){ var el=$("#ovbtns"); if(!el) return;
+    if(!st.granted) el.innerHTML='<span class="note" style="flex:1">먼저 이 앱에 <b>다른 앱 위에 표시</b>를 허용해 주세요. 허용하고 돌아오면 켤 수 있어요.</span><button class="btn pri" data-act="ovperm">허용하러 가기</button>';
+    else el.innerHTML=st.running?'<span class="note" style="flex:1">지금 화면에 나와 있어요</span><button class="btn" data-act="ovoff">숨기기</button>':'<span class="note" style="flex:1">권한이 허용되어 있어요</span><button class="btn pri" data-act="ovon">화면에 띄우기</button>'; }); }
+document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&VIEW==="set") setTimeout(ovSync,300); });
 function updBox(){
   var has=!!(api.checkUpdate||window.ddCheckUpdate);
   if(!has) return "";
@@ -403,7 +413,7 @@ function setView(){
     tile("s-hide",!!c.allHidden,"잠깐 다 숨기기","트레이 아이콘을 누르면 돌아와요")+
     tile("s-login",c.launchAtLogin!==false,"컴퓨터 켜면 같이 시작","관리 창 없이 캐릭터만 떠요")+"</div></div>"+
     '<div class="box"><div class="box-t">소리</div><div class="tiles" style="margin-bottom:12px">'+tile("s-mute",!!c.mute,"무음 모드","캐릭터를 눌러도 조용해요")+'</div><div class="lbl">누를 때 소리 크기</div><div class="slide"><input type="range" id="s-vol" min="0" max="100" value="'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'"><span class="val" id="s-vol-v">'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'%</span></div><div class="lbl">말소리 크기</div><div class="slide"><input type="range" id="s-vvol" min="0" max="100" value="'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'"><span class="val" id="s-vvol-v">'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'%</span></div><p class="note" style="margin-top:8px">어떤 소리가 날지는 캐릭터마다 [성격 · 대사]에서 골라요.</p></div>'+
-    updBox()+
+    ovBox()+updBox()+
     '<div class="box"><div class="box-t">데이터</div><div class="btns"><button class="btn" data-act="backup">백업 파일 만들기</button><label class="btn">백업에서 되돌리기<input type="file" id="rf" accept=".json,application/json"></label><button class="btn" data-act="charexpall">캐릭터 전부 내보내기</button><label class="btn">캐릭터 불러오기<input type="file" id="charimp" accept=".ddchar,.json,application/json"></label><button class="btn ghost" data-act="folder">저장 폴더 열기</button></div></div>'+
     '<p class="note" style="text-align:center;margin-top:18px">기념일 D-day <span id="ver2"></span> · 만든 사람 빵살 · 나만 쓰는 테스트 버전</p></div>';
 }
@@ -703,6 +713,7 @@ function render(){
   $("#crumb").textContent=VIEW==="char"?(t?"캐릭터 · "+(t.nick||t.name||"이름 없음"):"캐릭터"):({home:"홈",cal:"다이어리 달력",events:"일정",pair:"페어",anniv:"기념일",set:"설정"})[VIEW]||"";
   if(VIEW==="char"&&t) drawZones();
   if(VIEW==="home"&&t) ZMAP=null;
+  if(VIEW==="set") ovSync();
   $$('input[type=range]').forEach(fillRange);
   api.version().then(function(v){ $("#ver").textContent="v"+v; var v2=$("#ver2"); if(v2) v2.textContent="v"+v; });
 }
@@ -821,6 +832,9 @@ app.addEventListener("click",function(e){
   if(a==="pdel"){ var p2=pairOf(b); ask("이 페어를 풀까요? 캐릭터는 그대로 남아요.","풀기").then(function(ok){ if(!ok) return; S.pairs=S.pairs.filter(function(z){return z!==p2}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="pair"&&z.who.id===p2.id); }); saveSoon(true); render(); }); }
   if(a==="charexpall"){ if(!S.tokens.length){ toast("내보낼 캐릭터가 없어요"); return; } var all=S.tokens.map(function(x){ var c=JSON.parse(JSON.stringify(x)); delete c._cfg; return c; });
     api.saveFile("캐릭터-전체-"+new Date().toISOString().slice(0,10)+".ddchar",JSON.stringify({format:"dday-chars",v:1,saved:new Date().toISOString(),tokens:all})).then(function(ok){ if(ok) toast("캐릭터 "+all.length+"명을 파일 하나로 만들었어요"); }); return; }
+  if(a==="ovperm"){ window.ddOverlay.permission(); return; }
+  if(a==="ovon"){ window.ddOverlay.start().then(function(r){ if(r&&r.ok===false){ toast("먼저 권한을 허용해 주세요"); } else toast("화면에 캐릭터를 띄웠어요. 홈으로 나가서 확인해 보세요"); setTimeout(ovSync,500); }); return; }
+  if(a==="ovoff"){ window.ddOverlay.stop().then(function(){ toast("캐릭터를 숨겼어요"); setTimeout(ovSync,300); }); return; }
   if(a==="updcheck"){ var chk=api.checkUpdate||window.ddCheckUpdate; if(!chk){ toast("이 화면에서는 늘 최신이에요"); return; } b.disabled=true; b.textContent="확인하는 중…";
     chk().then(function(info){ UPD=info||{err:true}; render(); if(info&&info.newer) toast("새 버전 "+info.ver+"이 나왔어요"); else if(info&&!info.err) toast("지금 최신 버전이에요"); else toast("확인하지 못했어요 · 인터넷 연결을 봐 주세요"); }); return; }
   if(a==="updget"&&UPD&&UPD.url){ (api.openUrl?api.openUrl(UPD.url):window.open(UPD.url,"_blank")); return; }
