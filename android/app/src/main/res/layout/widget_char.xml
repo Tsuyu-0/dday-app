@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/c_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp" android:background="@drawable/widget_bg">
+    <TextView android:id="@+id/c_line" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@drawable/widget_bubble" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="7dp" android:paddingBottom="7dp"
+        android:textSize="13sp" android:textColor="#2A3140" android:maxLines="2" android:ellipsize="end" android:gravity="center" />
+    <ImageView android:id="@+id/c_img" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:layout_marginTop="6dp" android:scaleType="fitCenter" android:contentDescription="캐릭터" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:id="@+id/c_name" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="10sp" android:textColor="#7A8494" android:textStyle="bold" android:maxLines="1" />
+            <TextView android:id="@+id/c_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textSize="12sp" android:textColor="#1B2230" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        </LinearLayout>
+        <TextView android:id="@+id/c_dd" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="22sp" android:textColor="#4F7CFF" android:textStyle="bold" android:includeFontPadding="false" />
+    </LinearLayout>
+</LinearLayout>

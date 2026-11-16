@@ -1,0 +1,87 @@
+/* 토큰 그림 */
+.ck{position:absolute;transform-origin:50% 92%}
+.ck img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
+.ck .bo{transform-origin:50% 90%;animation:breB var(--bm,3400ms) ease-in-out infinite}
+.ck .hd{position:absolute;inset:0;animation:breH var(--bm,3400ms) ease-in-out infinite}
+.ck .hm{position:absolute;inset:0;transform-origin:var(--nk,50% 62%)}
+.ck .fc{opacity:0}
+.ck .f-head1{opacity:1}
+[data-face] .ck .f-head1{opacity:0}
+[data-face=head1] .ck .f-head1,[data-face=head2] .ck .f-head2,[data-face=head3] .ck .f-head3,[data-face=head4] .ck .f-head4{opacity:1}
+@keyframes breH{0%,100%{transform:translateY(0)}50%{transform:translateY(var(--ba,1.5%))}}
+@keyframes breB{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,.988)}}
+/* 움직임 */
+.m-squash .ck,.m-squash .one{animation:mSq .42s cubic-bezier(.3,1.5,.5,1)}
+.m-hop .ck,.m-hop .one{animation:mHop .5s cubic-bezier(.3,.9,.4,1)}
+.m-wobble .ck,.m-wobble .one{animation:mWob .55s ease-in-out}
+.m-nod .hm{animation:mNod .5s ease-in-out}
+.m-shake .hm{animation:mShake .5s ease-in-out}
+.m-nod .one{animation:mNodOne .5s ease-in-out}
+.m-shake .one{animation:mWob .5s ease-in-out}
+.m-tilt .hm{animation:mTilt 1.2s ease-in-out;transform-origin:var(--nk,50% 62%)}
+.m-tilt .one{animation:mTiltOne 1.2s ease-in-out;transform-origin:50% 100%}
+@keyframes mTilt{0%,100%{transform:rotate(0)}20%{transform:rotate(-3.5deg)}45%{transform:rotate(3deg)}68%{transform:rotate(-2deg)}86%{transform:rotate(.8deg)}}
+@keyframes mTiltOne{0%,100%{transform:rotate(0)}20%{transform:rotate(-2.5deg)}45%{transform:rotate(2deg)}68%{transform:rotate(-1.4deg)}86%{transform:rotate(.6deg)}}
+@keyframes mSq{0%{transform:scale(1,1)}35%{transform:scale(1.08,.88)}70%{transform:scale(.97,1.05)}100%{transform:scale(1,1)}}
+@keyframes mHop{0%{transform:translateY(0) scale(1,1)}15%{transform:translateY(0) scale(1.06,.92)}45%{transform:translateY(-14%) scale(.97,1.04)}75%{transform:translateY(0) scale(1.04,.95)}100%{transform:translateY(0) scale(1,1)}}
+@keyframes mWob{0%,100%{transform:rotate(0)}20%{transform:rotate(-7deg)}45%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}}
+@keyframes mNod{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(5%) rotate(0)}60%{transform:translateY(-1%)}}
+@keyframes mNodOne{0%,100%{transform:translateY(0)}30%{transform:translateY(4%)}}
+@keyframes mShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-6deg)}45%{transform:rotate(5deg)}70%{transform:rotate(-3deg)}}
+/* 이펙트 */
+.fxp{position:absolute;z-index:6;pointer-events:none;animation:fxPop .75s cubic-bezier(.3,1.4,.5,1) forwards;opacity:0}
+.fxp svg{width:100%;height:100%;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.15))}
+@keyframes fxPop{0%{opacity:0;transform:scale(.3) rotate(0)}30%{opacity:1;transform:scale(1.15) rotate(var(--r))}70%{opacity:1;transform:scale(1) rotate(var(--r))}100%{opacity:0;transform:scale(.6) rotate(var(--r))}}
+@keyframes fxUpOld{0%{opacity:0;transform:translate(0,0) scale(.4) rotate(0)}15%{opacity:1;transform:translate(calc(var(--dx)*.25),calc(var(--dy)*.2)) scale(1.1) rotate(calc(var(--r)*.3))}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.9) rotate(var(--r))}}
+
+/* 말풍선 */
+.bub{position:absolute;left:50%;transform:translateX(-50%);z-index:8;pointer-events:none;animation:bubPop .24s cubic-bezier(.3,1.5,.5,1);width:max-content}
+.bub .bbg{position:absolute;overflow:visible;pointer-events:none}
+.bub .soft path,.bub .soft circle{fill:#ffffff}
+.bb-thought .soft path,.bb-thought .soft circle{fill:#f4f6f9}
+.bub .ln{fill:#fff;stroke:#38404c;stroke-width:2;stroke-linejoin:miter}
+.bub .dot{fill:#fff;stroke:#6d7888;stroke-width:2.3;stroke-dasharray:.1 5.3;stroke-linecap:round}
+.bub .dots circle{fill:#6d7888}
+.bub .bt{position:relative;display:block;padding:10px 16px;font-size:14px;font-weight:600;line-height:1.4;color:#18202b;text-align:center;word-break:keep-all;max-width:220px;font-family:inherit}
+.bb-shout .bt{font-weight:800;font-size:15px;padding:10px 14px}
+.bb-thought .bt{padding:10px 16px;color:#3d4756}
+.bb-imagine .bt{color:#4a5566;padding:10px 16px}
+@keyframes bubPop{0%{opacity:0;transform:translateX(-50%) scale(.6)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
+/* 메모지 */
+.bb-memo{animation:memoIn .32s cubic-bezier(.3,1.4,.5,1) forwards}
+.bub .paper{fill:var(--memo,#fff3b0)}
+.bub .fold{fill:rgba(0,0,0,.08)}
+.bub .tape{fill:rgba(170,190,225,.62)}
+.bb-memo .bt{color:#4a3f2a;font-weight:600;padding:14px 18px 12px;text-align:left}
+@keyframes memoIn{0%{opacity:0;transform:translateX(-50%) rotate(calc(var(--rot,0deg) - 8deg)) scale(.7)}100%{opacity:1;transform:translateX(-50%) rotate(var(--rot,0deg)) scale(1)}}
+/* 도와줄까요 풍선 */
+.bub.bb-help{pointer-events:auto}
+.bb-help{animation:memoIn .32s cubic-bezier(.3,1.4,.5,1) forwards}
+.bb-help .bt{color:#3f3522;font-weight:600;font-size:13.5px;padding:16px 16px 4px;text-align:left;max-width:230px}
+.bb-help .hbtns{position:relative;display:flex;gap:6px;justify-content:flex-end;padding:6px 10px 10px}
+.bb-help .hbtns button{font:inherit;font-size:12px;font-weight:700;border:1px solid rgba(60,50,20,.18);background:rgba(255,255,255,.75);color:#4a3f22;border-radius:6px;padding:4px 10px;cursor:pointer}
+.bb-help .hbtns button:first-child{background:#3f3a30;border-color:#3f3a30;color:#fff}
+.bb-help .hbtns button:hover{filter:brightness(.97)}
+
+/* 파츠별 움직임 */
+.ck .p-ear{transform-origin:50% 80%}
+.ck .p-tail{transform-origin:35% 75%}
+.ck .p-hand{transform-origin:50% 40%}
+.ck .p-foot{transform-origin:50% 95%}
+[data-zone=tail] .ck .p-tail{animation:pWag .7s ease-in-out}
+[data-zone=ear] .ck .p-ear{animation:pTwitch .45s ease-in-out}
+[data-zone=hand] .ck .p-hand{animation:pWave .6s ease-in-out}
+[data-zone=foot] .ck .p-foot{animation:pTap .5s ease-in-out}
+@keyframes pWag{0%,100%{transform:rotate(0)}20%{transform:rotate(9deg)}45%{transform:rotate(-8deg)}70%{transform:rotate(6deg)}}
+@keyframes pTwitch{0%,100%{transform:scaleY(1)}30%{transform:scaleY(.86)}60%{transform:scaleY(1.04)}80%{transform:scaleY(.96)}}
+@keyframes pWave{0%,100%{transform:scale(1,1)}25%{transform:scale(1.06,.98)}55%{transform:scale(.98,1.01)}80%{transform:scale(1.03,.99)}}
+@keyframes pTap{0%,100%{transform:translateY(0)}30%{transform:translateY(-1.8%)}60%{transform:translateY(0)}75%{transform:translateY(-.9%)}}
+
+.pxl img,.px img{image-rendering:pixelated}
+
+.ck .bk{animation:breH var(--bm,3400ms) ease-in-out infinite;transform-origin:var(--nk,50% 62%)}
+.m-tilt .ck .bk{animation:mTilt 1.2s ease-in-out;transform-origin:var(--nk,50% 62%)}
+.m-nod .ck .bk{animation:mNod .5s ease-in-out}
+.m-shake .ck .bk{animation:mShake .5s ease-in-out;transform-origin:var(--nk,50% 62%)}
+
+.bub .bt .tw{opacity:0}

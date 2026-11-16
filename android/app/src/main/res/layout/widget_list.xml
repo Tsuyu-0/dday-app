@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/l_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp" android:background="@drawable/widget_bg">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="♥ 다가오는 날"
+        android:textSize="12sp" android:textColor="#7A8494" android:textStyle="bold" android:layout_marginStart="2dp" />
+    <TextView android:id="@+id/l_empty" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:gravity="center" android:text="앱을 열어 기념일을 넣어 주세요" android:textSize="13sp" android:textColor="#7A8494" android:visibility="gone" />
+    <LinearLayout android:id="@+id/l_row1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal" android:layout_marginTop="5dp" android:paddingStart="12dp" android:paddingEnd="12dp"
+        android:background="@drawable/widget_row_bg" android:gravity="center_vertical">
+        <TextView android:id="@+id/l_row1_t" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:textSize="13sp" android:textColor="#2A3242" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l_row1_d" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="15sp" android:textColor="#4F7CFF" android:textStyle="bold" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/l_row2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal" android:layout_marginTop="5dp" android:paddingStart="12dp" android:paddingEnd="12dp"
+        android:background="@drawable/widget_row_bg" android:gravity="center_vertical">
+        <TextView android:id="@+id/l_row2_t" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:textSize="13sp" android:textColor="#2A3242" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l_row2_d" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="15sp" android:textColor="#4F7CFF" android:textStyle="bold" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/l_row3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal" android:layout_marginTop="5dp" android:paddingStart="12dp" android:paddingEnd="12dp"
+        android:background="@drawable/widget_row_bg" android:gravity="center_vertical">
+        <TextView android:id="@+id/l_row3_t" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:textSize="13sp" android:textColor="#2A3242" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l_row3_d" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="15sp" android:textColor="#4F7CFF" android:textStyle="bold" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/l_row4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal" android:layout_marginTop="5dp" android:paddingStart="12dp" android:paddingEnd="12dp"
+        android:background="@drawable/widget_row_bg" android:gravity="center_vertical">
+        <TextView android:id="@+id/l_row4_t" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:textSize="13sp" android:textColor="#2A3242" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l_row4_d" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="15sp" android:textColor="#4F7CFF" android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

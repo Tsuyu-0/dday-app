@@ -1,0 +1,15 @@
+{
+  "name": "oca-dday",
+  "productName": "기념일 D-day",
+  "version": "0.20.0",
+  "description": "자캐 기념일 D-day · 바탕화면 토큰",
+  "main": "app/main.js",
+  "author": "빵살",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0"
+  },
+  "scripts": {
+    "build": "node build.js"
+  }
+}

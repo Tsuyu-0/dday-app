@@ -1,0 +1,109 @@
+name: 앱 만들기 (안드로이드 · PC)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 버전 번호 (예전 저장소의 13번 다음부터 이어서)
+        shell: bash
+        run: echo "BUILD=$((GITHUB_RUN_NUMBER + 20))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: 안드로이드 SDK 라이선스
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: 웹 파일 → 안드로이드
+        run: |
+          echo "{\"build\": ${{ env.BUILD }}}" > web/build.json
+          npm ci
+          npx cap sync android
+
+      - name: APK 빌드
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: 이름 붙이기
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk dday-app.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dday-app
+          path: dday-app.apk
+
+      - name: 다운로드 링크(Releases)에 올리기
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ env.BUILD }}
+          name: 기념일 D-day 1.0.${{ env.BUILD }}
+          body: |
+            **안드로이드**: 폰에서 dday-app.apk 를 눌러 받아 설치하세요. 처음 한 번은 '출처를 알 수 없는 앱 설치'를 허용해야 해요. 다음부터는 덮어 설치하면 데이터가 그대로 남아요.
+            **PC(윈도우)**: AnniversaryDday-Windows.zip 을 받아 압축을 풀고 AnniversaryDday.exe 를 실행하세요. 'Windows의 PC 보호' 창이 뜨면 [추가 정보] → [실행]을 누르세요.
+          files: dday-app.apk
+          make_latest: true
+
+  pc:
+    needs: apk
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 버전 번호 (예전 저장소의 13번 다음부터 이어서)
+        shell: bash
+        run: echo "BUILD=$((GITHUB_RUN_NUMBER + 20))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: PC(윈도우)용 묶기
+        working-directory: desktop
+        shell: bash
+        run: |
+          echo "{\"build\": ${{ env.BUILD }}}" > app/build.json
+          npm ci
+          node build.js
+
+      - name: 설치 파일 하나(.exe)로 만들기
+        working-directory: desktop
+        shell: bash
+        run: |
+          npx --yes electron-builder@26 --win nsis --x64 --prepackaged out/AnniversaryDday-win32-x64 --publish never \
+            -c.appId=com.ppangsal.dday -c.electronVersion=38.8.6 -c.productName=AnniversaryDday -c.win.icon=icon.ico \
+            -c.nsis.oneClick=true -c.nsis.perMachine=false -c.nsis.createDesktopShortcut=always \
+            -c.nsis.shortcutName="기념일 D-day" -c.nsis.installerIcon=icon.ico -c.nsis.uninstallDisplayName="기념일 D-day" \
+            -c.nsis.artifactName=AnniversaryDday-Setup.exe -c.directories.output=dist
+          ls -la dist
+
+      - name: 압축본도 같이 (설치 없이 쓰고 싶은 사람용)
+        working-directory: desktop/out
+        shell: pwsh
+        run: Compress-Archive -Path AnniversaryDday-win32-x64 -DestinationPath ../../AnniversaryDday-Windows.zip
+
+      - name: 같은 다운로드 링크에 PC 버전 추가
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ env.BUILD }}
+          files: |
+            desktop/dist/AnniversaryDday-Setup.exe
+            AnniversaryDday-Windows.zip

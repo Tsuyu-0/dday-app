@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">기념일 D-day</string>
+    <string name="title_activity_main">기념일 D-day</string>
+    <string name="package_name">com.ppangsal.dday</string>
+    <string name="custom_url_scheme">com.ppangsal.dday</string>
+    <string name="widget_desc">다음 기념일 D-day와 캐릭터</string>
+    <string name="widget_list_desc">다가오는 기념일 · 일정 4개</string>
+    <string name="widget_small_desc">가장 가까운 D-day 하나</string>
+    <string name="widget_char_desc">캐릭터 크게 · 한마디 말풍선</string>
+    <string name="widget_today_desc">오늘 · 내일 있는 기념일과 일정</string>
+    <string name="widget_cal_desc">이번 달 달력 · 기념일과 일정 점</string>
+    <string name="widget_since_desc">함께한 지 며칠째 · 다음 100일까지</string>
+    <string name="widget_stamp_desc">기념일까지 하루씩 도장 찍는 카드</string>
+</resources>

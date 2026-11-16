@@ -1,0 +1,6 @@
+{
+  "appId": "com.ppangsal.dday",
+  "appName": "기념일 D-day",
+  "webDir": "web",
+  "android": { "backgroundColor": "#f6f8fb" }
+}
