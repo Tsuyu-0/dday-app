@@ -26,7 +26,7 @@
   function refreshPos() { return Promise.all([win.outerPosition(), win.scaleFactor()]).then(function (r) { k = r[1] || 1; pos = { x: r[0].x, y: r[0].y }; posT = Date.now(); }).catch(function () {}); }
   function setIgnore(v) { v = !!v; if (v === ignoring) return; ignoring = v; win.setIgnoreCursorEvents(v).catch(function () {}); }
   function poll() {
-    if (me !== "pet") return;
+    if (!/^pet/.test(me)) return;
     setTimeout(poll, ignoring ? 70 : 250);
     if (!ignoring || dragFrom) return;
     var p = Date.now() - posT > 1500 ? refreshPos() : Promise.resolve();
@@ -38,7 +38,7 @@
       el.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: x, clientY: y, screenX: c.x / k, screenY: c.y / k }));
     }).catch(function () {});
   }
-  if (me === "pet") { refreshPos().then(function () { setIgnore(true); poll(); }); }
+  if (/^pet/.test(me)) { refreshPos().then(function () { setIgnore(true); poll(); }); }
 
   /* 관리 창: 제목 줄을 잡고 끌면 창 이동, 두 번 누르면 크게 */
   if (me === "manager") {
@@ -72,6 +72,8 @@
     petOpen: function (v) { send("pet:open", v); },
     onNav: on("nav"),
     onPetPoke: on("pet:poke"),
+    onPetLine: on("pet:line"),
+    petTapped: function () { send("pet:tap"); },
     petIgnore: function (v) { if (!dragFrom) setIgnore(v); },
     petDragStart: function () { setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; }); },
     petDrag: function (dx, dy) { if (dragFrom) win.setPosition(new LPos(Math.round(dragFrom.x + dx), Math.round(dragFrom.y + dy))).catch(function () {}); },

@@ -9,7 +9,7 @@
   var WW = T.webviewWindow.WebviewWindow;
   var DPI = T.dpi || T.window, LPos = DPI.LogicalPosition, LSize = DPI.LogicalSize;
 
-  var S = null, SEED = null, manager = null, pet = null, tray = null, quitting = false, updInfo = null, monitors = [];
+  var S = null, SEED = null, manager = null, tray = null, quitting = false, updInfo = null, monitors = [];
   var seedCopy = function () { return JSON.parse(JSON.stringify(SEED)); };
 
   /* ---------- 그림 주소: 저장은 file:///, 화면에는 asset 주소 ---------- */
@@ -104,8 +104,11 @@
   }
   function setBounds(w, b) { return Promise.all([w.setSize(new LSize(b.width, b.height)), w.setPosition(new LPos(b.x, b.y))]); }
 
-  /* ---------- 바탕화면 캐릭터 (한 명) ---------- */
-  var PAD_X = 84, PAD_TOP = 112, petPick = null, lastDay = "", petSize = null, opening = false;
+  /* ---------- 바탕화면 캐릭터 (한 명, 페어를 같이 띄우면 두 명) ---------- */
+  var PAD_X = 84, PAD_TOP = 112, lastDay = "";
+  var LABELS = ["pet", "pet2"], FOOT = { pet: "foot", pet2: "foot2" };
+  var P = { pet: { win: null, pick: null, size: null, opening: false }, pet2: { win: null, pick: null, size: null, opening: false } };
+  var pet = null; // 첫 번째 창 (알림 말풍선용)
   function petBounds(t) {
     var size = (t.desk && t.desk.size) || 160, up = Math.max(0, ((t.bubblePos && t.bubblePos.y) || 0) / 100 * size);
     return { width: size + PAD_X * 2, height: Math.round(size + PAD_TOP + 8 + up), size: size };
@@ -115,78 +118,159 @@
     var d = displayFor({ x: x, y: y, width: w, height: h });
     return { x: Math.min(Math.max(x, d.x - w + 60), d.x + d.width - 60), y: Math.min(Math.max(y, d.y - PAD_TOP), d.y + d.height - h + 10) };
   }
-  function boundsAtFoot(t) {
-    var b = petBounds(t), f = S.settings.foot, x, y;
+  function boundsAtFoot(t, label) {
+    var b = petBounds(t), f = S.settings[FOOT[label]], x, y;
+    if (label === "pet2" && !(f && typeof f.x === "number")) {
+      // 두 번째는 첫 번째 왼쪽 옆에 나란히
+      var t1 = P.pet.pick && tok(P.pet.pick.id), f1 = S.settings.foot, b1 = t1 ? petBounds(t1) : b;
+      var fx = f1 && typeof f1.x === "number" ? f1.x : defaultPos(t1 || t).x + b1.width / 2, fy = f1 && typeof f1.y === "number" ? f1.y : defaultPos(t1 || t).y + b1.height;
+      f = { x: fx - (b1.size + b.size) / 2 - 16, y: fy };
+    }
     if (f && typeof f.x === "number") { x = Math.round(f.x - b.width / 2); y = Math.round(f.y - b.height); }
     else { var p = defaultPos(t); x = p.x; y = p.y; }
     var k = keepOnScreen(x, y, b.width, b.height);
     return { x: Math.round(k.x), y: Math.round(k.y), width: b.width, height: b.height };
   }
-  function saveFoot() { if (!pet) return; boundsOf(pet).then(function (b) { S.settings.foot = { x: b.x + b.width / 2, y: b.y + b.height }; persist(); }); }
-  function petData() {
-    if (!petPick) return null;
-    var t = tok(petPick.id); if (!t) return null;
-    var st = S.settings, extra = { clickThrough: st.clickThrough !== false, mute: !!st.mute, volume: typeof st.volume === "number" ? st.volume : 0.5, voiceVol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6, day: A.ymd(new Date()) };
-    if (petPick.anniv) { var a = petPick.anniv, n = petPick.n; extra.anniv = { id: a.id, title: a.title, label: n.label, days: n.days, lines: (a.lines || []).filter(Boolean), def: A.defaultLine(S, a, n) }; }
-    if (petPick.event) extra.event = { id: petPick.event.id, title: petPick.event.title, time: petPick.event.time || "" };
-    extra.today = A.on(S, A.ymd(new Date())).events.map(function (e) { return { title: e.title, time: e.time || "" }; });
+  function saveFoot(label) { var w = P[label] && P[label].win; if (!w) return; boundsOf(w).then(function (b) { S.settings[FOOT[label]] = { x: b.x + b.width / 2, y: b.y + b.height }; persist(); }); }
+  function petData(label) {
+    var pick = P[label] && P[label].pick;
+    if (!pick) return null;
+    var t = tok(pick.id); if (!t) return null;
+    var st = S.settings, extra = { clickThrough: st.clickThrough !== false, mute: !!st.mute, volume: typeof st.volume === "number" ? st.volume : 0.5, voiceVol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6, day: A.ymd(new Date()), duo: !!(P.pet.pick && P.pet2.pick) };
+    if (pick.anniv) { var a = pick.anniv, n = pick.n; extra.anniv = { id: a.id, title: a.title, label: n.label, days: n.days, lines: (a.lines || []).filter(Boolean), def: A.defaultLine(S, a, n) }; }
+    if (pick.event) extra.event = { id: pick.event.id, title: pick.event.title, time: pick.event.time || "" };
+    extra.today = label === "pet" ? A.on(S, A.ymd(new Date())).events.map(function (e) { return { title: e.title, time: e.time || "" }; }) : [];
     extra.soon = A.upcoming(S).filter(function (x) { return x.n.days > 0 && x.n.days <= 14 && A.involves(S, x.a, t.id); }).slice(0, 3).map(function (x) { return { title: x.a.title, days: x.n.days }; });
     return JSON.parse(toView(JSON.stringify(Object.assign({}, t, { _cfg: extra }))));
   }
-  function openPet(t) {
-    if (opening) return; opening = true;
-    var b = boundsAtFoot(t); petSize = b;
-    pet = new WW("pet", {
+  function openPet(label, t) {
+    var o = P[label]; if (o.opening) return; o.opening = true;
+    var b = boundsAtFoot(t, label); o.size = b;
+    var w = o.win = new WW(label, {
       url: "pet.html", x: b.x, y: b.y, width: b.width, height: b.height, transparent: true, decorations: false, resizable: false, maximizable: false, minimizable: false,
       skipTaskbar: true, shadow: false, alwaysOnTop: S.settings.pinned !== false, focus: false, visible: true, title: "기념일 D-day 캐릭터",
     });
-    pet.once("tauri://created", function () { opening = false; });
-    pet.once("tauri://error", function (e) { T.core.invoke("log", { msg: String(["pet", e].join(" ")) }).catch(function(){}); opening = false; pet = null; });
-    pet.once("tauri://destroyed", function () { pet = null; });
+    if (label === "pet") pet = w;
+    w.once("tauri://created", function () { o.opening = false; });
+    w.once("tauri://error", function (e) { T.core.invoke("log", { msg: "pet error " + JSON.stringify(e) }).catch(function () {}); o.opening = false; o.win = null; if (label === "pet") pet = null; });
+    w.once("tauri://destroyed", function () { if (o.win === w) o.win = null; if (pet === w) pet = null; });
+  }
+  function closePet(label) { var o = P[label]; if (o.win) { o.win.destroy().catch(function () {}); o.win = null; } if (label === "pet") pet = null; o.size = null; }
+  /* 같이 띄우는 페어 (2명 이상 묶인 페어만) */
+  function duoPair() {
+    var id = S.settings.duo; if (!id) return null;
+    var p = (S.pairs || []).filter(function (x) { return x.id === id; })[0]; if (!p) return null;
+    var ids = (p.tokenIds || []).filter(function (x) { return tok(x); }).slice(0, 2);
+    return ids.length === 2 ? { p: p, ids: ids } : null;
+  }
+  function picks() {
+    if (S.settings.allHidden) return [null, null];
+    var one = A.pick(S); if (!one) return [null, null];
+    var d = duoPair(); if (!d) return [one, null];
+    if (d.ids.indexOf(one.id) >= 0) return [one, { id: d.ids[0] === one.id ? d.ids[1] : d.ids[0], reason: "duo" }];
+    if (one.reason === "main") return [{ id: d.ids[0], reason: "duo" }, { id: d.ids[1], reason: "duo" }];
+    return [one, null];
   }
   function syncPets() {
-    petPick = S.settings.allHidden ? null : A.pick(S);
-    var t = petPick && tok(petPick.id);
-    if (!t) { if (pet) { pet.destroy(); pet = null; } updateTray(); return; }
-    if (!pet) openPet(t);
-    else {
-      var b = petBounds(t);
-      if (!petSize || petSize.width !== b.width || petSize.height !== b.height) {
-        boundsOf(pet).then(function (cur) { var fx = cur.x + cur.width / 2, fy = cur.y + cur.height; petSize = { width: b.width, height: b.height }; setBounds(pet, { x: Math.round(fx - b.width / 2), y: Math.round(fy - b.height), width: b.width, height: b.height }); });
+    var pk = picks();
+    LABELS.forEach(function (label, i) {
+      var o = P[label]; o.pick = pk[i];
+      var t = o.pick && tok(o.pick.id);
+      if (!t) { closePet(label); return; }
+      if (!o.win) openPet(label, t);
+      else {
+        var b = petBounds(t);
+        if (!o.size || o.size.width !== b.width || o.size.height !== b.height) {
+          boundsOf(o.win).then(function (cur) { var fx = cur.x + cur.width / 2, fy = cur.y + cur.height; o.size = { width: b.width, height: b.height }; setBounds(o.win, { x: Math.round(fx - b.width / 2), y: Math.round(fy - b.height), width: b.width, height: b.height }); });
+        }
+        sendTo(label, "pet:token", petData(label));
       }
-      sendTo("pet", "pet:token", petData());
-    }
+    });
     updateTray();
   }
   setInterval(function () { if (!S) return; var d = A.ymd(new Date()); if (d !== lastDay) { lastDay = d; syncPets(); pushToManager(); } }, 30000);
 
-  handlers["pet:token"] = function () { return petData(); };
-  handlers["pet:dragend"] = function () { saveFoot(); };
+  /* ---------- 둘이 나누는 대화 ---------- */
+  var DEF_TALKS = "{A}: 오늘 뭐 했어?\n{B}: 너 기다렸지!\n\n{A}: 배고프지 않아?\n{B}: 방금 그 말 기다렸어\n\n{B}: 나 오늘 좀 멋있지?\n{A}: ...응, 쪼끔\n\n{A}: {B}!\n{B}: 왜~\n{A}: 그냥 불러 봤어\n\n{B}: 졸려...\n{A}: 조금만 더 버티자\n\n{A}: 여기 화면 넓다\n{B}: 같이 있으니까 좁은데?";
+  function nameOf(id) { var t = tok(id); return t ? (t.nick || t.name || "") : ""; }
+  function parseTalks(text, ids) {
+    var nA = nameOf(ids[0]), nB = nameOf(ids[1]);
+    var who = function (k) { k = k.trim(); if (!k) return null; if (k === nA || k === (tok(ids[0]) || {}).name || /^(A|1)$/i.test(k)) return 0; if (k === nB || k === (tok(ids[1]) || {}).name || /^(B|2)$/i.test(k)) return 1; return null; };
+    return String(text || "").replace(/\r/g, "").split(/\n\s*\n/).map(function (block) {
+      var next = 0;
+      return block.split("\n").map(function (ln) {
+        ln = ln.trim(); if (!ln) return null;
+        var m = /^([^:：]{1,16})[:：]\s*(.+)$/.exec(ln), w = m ? who(m[1]) : null, txt = m && w != null ? m[2] : ln;
+        if (w == null) w = next; next = 1 - w;
+        return { w: w, t: txt.replace(/\{A\}/g, nA).replace(/\{B\}/g, nB) };
+      }).filter(Boolean);
+    }).filter(function (c) { return c.length; });
+  }
+  function talksFor(d) {
+    var list = parseTalks(d.p.talks && d.p.talks.trim() ? d.p.talks : DEF_TALKS, d.ids);
+    // 페어 기념일이 다가오면 그 얘기도
+    try {
+      A.upcoming(S).filter(function (x) { return x.n.days >= 0 && x.n.days <= 14 && x.a.who && x.a.who.type === "pair" && x.a.who.id === d.p.id; }).slice(0, 1).forEach(function (x) {
+        var tt = x.n.label && x.n.label !== x.a.title ? x.a.title + " " + x.n.label : x.a.title;
+        var c = x.n.days === 0 ? [{ w: 0, t: "오늘 " + tt + "이야!" }, { w: 1, t: "알아, 기억하고 있었어" }] : [{ w: 0, t: tt + "까지 " + x.n.days + "일 남았대" }, { w: 1, t: "벌써? 뭐 준비하지..." }];
+        list.push(c, c);
+      });
+    } catch (e) {}
+    return list;
+  }
+  var talking = false, lastTalk = -1;
+  function playTalk() {
+    var d = duoPair(); if (talking || !d || !P.pet.win || !P.pet2.win || !P.pet.pick || !P.pet2.pick) return false;
+    var list = talksFor(d); if (!list.length) return false;
+    var i = Math.floor(Math.random() * list.length); if (list.length > 1 && i === lastTalk) i = (i + 1) % list.length; lastTalk = i;
+    var conv = list[i], lab = {}; lab[P.pet.pick.id] = "pet"; lab[P.pet2.pick.id] = "pet2";
+    talking = true;
+    var step = function (k) {
+      if (k >= conv.length || !P.pet.win || !P.pet2.win) { talking = false; return; }
+      var line = conv[k], label = lab[d.ids[line.w]] || (line.w ? "pet2" : "pet"), ms = Math.min(4200, Math.max(1700, 900 + line.t.length * 90));
+      sendTo(label, "pet:line", { text: line.t, ms: ms });
+      setTimeout(function () { step(k + 1); }, ms + 350);
+    };
+    step(0);
+    return true;
+  }
+  // 가끔 저절로 (평균 2~3분에 한 번)
+  setInterval(function () { if (S && !S.settings.allHidden && Math.random() < 0.12) playTalk(); }, 20000);
+  handlers["pet:tap"] = function () { if (Math.random() < 0.3) setTimeout(playTalk, 1700); };
+
+  handlers["pet:token"] = function (from) { return petData(from || "pet"); };
+  handlers["pet:dragend"] = function (from) { saveFoot(from || "pet"); };
   handlers["pet:open"] = function (v) { showManager().then(function () { setTimeout(function () { sendTo("manager", "nav", v); }, 350); }); };
-  handlers["pet:menu"] = function () {
-    if (!pet || !petPick) return; var t = tok(petPick.id); if (!t) return;
+  handlers["pet:menu"] = function (from) {
+    var label = from || "pet", o = P[label]; if (!o || !o.win || !o.pick) return; var t = tok(o.pick.id); if (!t) return;
     t.desk = Object.assign({ size: 160 }, t.desk || {});
-    var size = t.desk.size || 160;
+    var size = t.desk.size || 160, d = duoPair();
     var redo = function () { persist(); syncPets(); pushToManager(); };
     var M = T.menu.Menu, items = [
-      { text: (t.nick || t.name) + " 쓰다듬기", action: function () { sendTo("pet", "pet:poke"); } },
-      { text: "관리 창에서 고치기", action: function () { showManager().then(function () { setTimeout(function () { sendTo("manager", "edit", t.id); }, 300); }); } },
-      { text: "다른 캐릭터로 바꾸기", items: S.tokens.map(function (x) { return { text: (x.nick || x.name || "이름 없음") + (x.id === S.settings.main ? "  (기본)" : ""), checked: x.id === petPick.id, action: function () { S.settings.main = x.id; redo(); } }; }) },
+      { text: (t.nick || t.name) + " 쓰다듬기", action: function () { sendTo(label, "pet:poke"); } },
     ];
-    if (petPick.anniv) items.push({ text: "오늘: " + petPick.anniv.title + " (" + A.ddayText(petPick.n) + ")", enabled: false });
-    if (petPick.event) items.push({ text: "오늘 일정: " + petPick.event.title + (petPick.event.time ? " " + petPick.event.time : ""), enabled: false });
+    if (d && P.pet2.win) items.push({ text: "둘이 이야기하기", action: function () { playTalk(); } });
+    items.push(
+      { text: "관리 창에서 고치기", action: function () { showManager().then(function () { setTimeout(function () { sendTo("manager", "edit", t.id); }, 300); }); } },
+      { text: label === "pet2" ? "옆 캐릭터 바꾸기 (페어 화면에서)" : "다른 캐릭터로 바꾸기", items: label === "pet2" ? [{ text: "페어 화면 열기", action: function () { showManager().then(function () { setTimeout(function () { sendTo("manager", "nav", "pair"); }, 300); }); } }] : S.tokens.map(function (x) { return { text: (x.nick || x.name || "이름 없음") + (x.id === S.settings.main ? "  (기본)" : ""), checked: x.id === o.pick.id, action: function () { S.settings.main = x.id; redo(); } }; }) }
+    );
+    if (o.pick.anniv) items.push({ text: "오늘: " + o.pick.anniv.title + " (" + A.ddayText(o.pick.n) + ")", enabled: false });
+    if (o.pick.event) items.push({ text: "오늘 일정: " + o.pick.event.title + (o.pick.event.time ? " " + o.pick.event.time : ""), enabled: false });
     items.push(
       { item: "Separator" },
       { text: "크기", items: [[120, "120px"], [160, "160px (기본)"], [240, "240px"], [320, "320px"]].map(function (x) { return { text: x[1], checked: size === x[0], action: function () { t.desk.size = x[0]; redo(); } }; }) },
-      { text: "오른쪽 아래로 돌려보내기", action: function () { S.settings.foot = null; setBounds(pet, boundsAtFoot(t)).then(saveFoot); } },
+      { text: label === "pet2" ? "옆자리로 돌려보내기" : "오른쪽 아래로 돌려보내기", action: function () { S.settings[FOOT[label]] = null; if (label === "pet") S.settings.foot2 = null; LABELS.forEach(function (l) { var oo = P[l], tt = oo.pick && tok(oo.pick.id); if (oo.win && tt && (l === label || label === "pet")) setBounds(oo.win, boundsAtFoot(tt, l)).then(function () { saveFoot(l); }); }); } },
       { text: "위치 잠금", checked: !!t.desk.lock, action: function () { t.desk.lock = !t.desk.lock; redo(); } },
-      { text: "좌우 반전", checked: !!t.desk.flip, action: function () { t.desk.flip = !t.desk.flip; redo(); } },
+      { text: "좌우 반전", checked: !!t.desk.flip, action: function () { t.desk.flip = !t.desk.flip; redo(); } }
+    );
+    if (d) items.push({ text: "둘이 같이 띄우기 끄기", action: function () { S.settings.duo = ""; redo(); } });
+    items.push(
       { item: "Separator" },
       { text: "관리 창 열기", action: function () { showManager(); } },
       { text: "잠깐 숨기기", action: function () { S.settings.allHidden = true; redo(); } },
       { text: "종료", action: quit }
     );
-    return M.new({ items: items }).then(function (m) { return m.popup(undefined, pet); });
+    return M.new({ items: items }).then(function (m) { return m.popup(undefined, o.win); });
   };
 
   /* ---------- 그림 · 소리 파일 ---------- */
@@ -293,7 +377,8 @@
   handlers["settings:set"] = function (k, v) {
     if (k === "pinned") return setPinned(v);
     S.settings[k] = v; persist();
-    if (["allHidden", "clickThrough", "mute", "volume", "voiceVol", "main", "annivSwap", "annivLead"].indexOf(k) >= 0) syncPets();
+    if (k === "talkNow") { playTalk(); return; }
+    if (["allHidden", "clickThrough", "mute", "volume", "voiceVol", "main", "annivSwap", "annivLead", "duo"].indexOf(k) >= 0) syncPets();
     if (k === "annivNotify") checkReminders();
     if (k === "launchAtLogin") applyLogin();
     if (k === "theme") applyTheme();
@@ -333,7 +418,7 @@
   /* ---------- 트레이 ---------- */
   function setPinned(v) {
     S.settings.pinned = !!v; persist(); pushToManager();
-    if (pet) pet.setAlwaysOnTop(!!v).catch(function () {});
+    LABELS.forEach(function (l) { if (P[l].win) P[l].win.setAlwaysOnTop(!!v).catch(function () {}); });
     updateTray();
   }
   function quit() { quitting = true; persist(true).then(function () { invoke("quit_app"); }); }

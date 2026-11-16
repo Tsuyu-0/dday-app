@@ -9,7 +9,7 @@ Z.FX=[["none","없음"],["heart","하트"],["star","별"],["sparkle","반짝"],[
 Z.FACES=[["head1","평소"],["head2","얼굴 2"],["head3","얼굴 3"],["head4","얼굴 4"]];
 Z.SOUNDS=[["none","없음"],["click","딸깍"],["key","키보드"],["wrap","뽁뽁이"],["pencil","연필"],["page","책장"],["kalimba","칼림바"],["xylo","실로폰"],["glass","유리 딩"],["harp","하프"],["music","오르골"],["sparkle","별가루"],["custom","내 소리"]];
 Z.SOUND_OLD={tok:"click",pop:"wrap",bubble:"music",squeak:"sparkle",chime:"glass",pen:"pencil",stamp:"key",sticker:"wrap",bell:"glass"};
-Z.BUBBLES=[["speech","말풍선"],["memo","포스트잇"],["shout","놀람"],["thought","생각"],["imagine","상상"]];
+Z.BUBBLES=[["speech","말풍선"],["memo","포스트잇"],["shout","놀람"],["thought","생각"],["imagine","상상"],["sfx","효과음 글씨"]];
 Z.DEFAULT={head:{motion:"nod",fx:"heart",face:"head2",sound:"click",bubble:"speech"},face:{motion:"squash",fx:"sweat",face:"head2",sound:"wrap",bubble:"speech"},body:{motion:"hop",fx:"star",face:"head1",sound:"key",bubble:"speech"},hand:{motion:"wobble",fx:"sparkle",face:"head2",sound:"pencil",bubble:"speech"},foot:{motion:"hop",fx:"note",face:"head1",sound:"page",bubble:"speech"},ear:{motion:"none",fx:"anger",face:"head2",sound:"wrap",bubble:"shout"},tail:{motion:"none",fx:"heart",face:"head2",sound:"kalimba",bubble:"speech"},all:{motion:"squash",fx:"heart",face:"head1",sound:"click",bubble:"speech"}};
 Z.get=function(t,k){ var z=(t.zones&&t.zones[k])||{}; var d=Z.DEFAULT[k]; var snd=z.sound||d.sound, ssrc=z.soundSrc||null; if(t.voice&&t.voice!=="mix"){ snd=t.voice; ssrc=t.voiceSrc||null; } snd=Z.SOUND_OLD[snd]||snd; if(snd==="custom"&&!ssrc) snd="none"; return {motion:z.motion||d.motion,fx:z.fx||d.fx,face:z.face||d.face,sound:snd,soundSrc:ssrc,bubble:(z.bubble==="sign"?"speech":z.bubble)||d.bubble,lines:Array.isArray(z.lines)?z.lines:[]}; };
 Z.set=function(t,k,key,val){ t.zones=t.zones||{}; t.zones[k]=Object.assign({},Z.get(t,k),t.zones[k]||{}); t.zones[k][key]=val; };
@@ -126,10 +126,11 @@ Z.parseLine=function(s,def){
   s=String(s==null?"":s).trim();
   if(s.charAt(0)==="!") return {style:"shout",text:s.slice(1).trim()};
   if(s.charAt(0)==="~") return {style:"imagine",text:s.slice(1).trim()};
+  if(s.charAt(0)==="*") return {style:"sfx",text:s.slice(1).trim()};
   if(s.charAt(0)==="("){ var t=s.slice(1); if(t.slice(-1)===")") t=t.slice(0,-1); return {style:"thought",text:t.trim()}; }
   return {style:(def&&def!=="sign")?def:"speech",text:s,auto:true};
 };
-Z.composeLine=function(style,text){ text=String(text==null?"":text).trim(); if(style==="shout") return "!"+text; if(style==="imagine") return "~"+text; if(style==="thought") return "("+text+")"; return text; };
+Z.composeLine=function(style,text){ text=String(text==null?"":text).trim(); if(style==="shout") return "!"+text; if(style==="imagine") return "~"+text; if(style==="thought") return "("+text+")"; if(style==="sfx") return "*"+text; return text; };
 var SVGNS="http://www.w3.org/2000/svg";
 function f1(n){ return Math.round(n*10)/10; }
 var BID=0;
@@ -152,6 +153,17 @@ Z.bubble=function(host,text,style,pos,idle){
   style=style||"speech";
   var el=document.createElement("div"); el.className="bub bb-"+style+(idle?" idle":"");
   var sp=document.createElement("span"); sp.className="bt"; sp.textContent=text; el.appendChild(sp);
+  /* 효과음 글씨: 풍선 없이 만화 효과음처럼 글자가 하나씩 튀어나와 위로 떠올라요 */
+  if(style==="sfx"){
+    var SC=["#ff5c8a","#ff8a3d","#4f7cff","#9b6bff","#22b07d","#ffb020"];
+    el.style.setProperty("--sfx",SC[Math.floor(Math.random()*SC.length)]); el.style.setProperty("--rot",(Math.random()*14-7).toFixed(1)+"deg");
+    sp.textContent=""; Array.from(String(text)).forEach(function(ch,i){ var c=document.createElement("span"); c.className="ch"; c.textContent=ch; c.style.setProperty("--i",i); c.style.setProperty("--wob",((i%2?1:-1)*(2+Math.random()*4)).toFixed(1)+"deg"); sp.appendChild(c); });
+    if(pos&&pos.bottom!=null) el.style.bottom=(pos.bottom-14)+"px"; if(pos&&pos.top!=null) el.style.top=pos.top+"px";
+    if(pos&&pos.maxWidth) sp.style.maxWidth=pos.maxWidth+"px";
+    host.appendChild(el);
+    if(pos&&(pos.dx||pos.clamp)){ var hw0=host.clientWidth, w0=el.offsetWidth, cx0=hw0/2+(pos.dx||0); if(pos.clamp) cx0=Math.max(w0/2+6,Math.min(hw0-w0/2-6,cx0)); el.style.left=cx0+"px"; }
+    return el;
+  }
   if(style==="memo"||style==="help"){ var MC=["#fff3b0","#ffd9e4","#d6f2e4","#dce8ff"]; el.style.setProperty("--memo",MC[Math.floor(Math.random()*MC.length)]); el.style.setProperty("--rot",(Math.random()*6-3).toFixed(1)+"deg"); }
   if(style==="help"&&pos&&pos.buttons&&pos.buttons.length){ var bw=document.createElement("span"); bw.className="hbtns";
     pos.buttons.forEach(function(b){ var x=document.createElement("button"); x.textContent=b[0]; x.addEventListener("click",function(ev){ ev.stopPropagation(); el.remove(); if(pos.onAct) pos.onAct(b[1]); }); bw.appendChild(x); }); el.appendChild(bw); }
@@ -188,8 +200,9 @@ Z.say=function(host,line,def,pos,ms,idle){
     Array.prototype.forEach.call(host.querySelectorAll(":scope > .bub"),function(x){x.remove()});
     if(k>=parts.length) return;
     var p=Z.parseLine(parts[k++],def); if(!p.text){ next(); return; }
-    Z.bubble(host,p.text,p.style,pos,idle);
-    host._sayT=setTimeout(next,Math.max(ms||1500,800+p.text.length*95));
+    var dur=Math.max(ms||1500,800+p.text.length*95), bel=Z.bubble(host,p.text,p.style,pos,idle);
+    if(p.style==="sfx"&&bel) bel.style.setProperty("--sfxms",(dur/1000+.1).toFixed(2)+"s");
+    host._sayT=setTimeout(next,dur);
   })();
 };
 

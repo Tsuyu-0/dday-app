@@ -205,8 +205,16 @@ function updBanner(){ if(!UPD||!UPD.newer) return ""; return '<div class="updban
 function ptLbl(v){ return v===0?"기본":(v>0?"높게 +"+v:"낮게 "+v); }
 function spLbl(v){ return v<.9?"느릿느릿":v>1.2?"빠르게":"보통"; }
 function bbSample(t){ var tk=$("#zst .tok"); if(!tk||!t.babble||t.babble==="none") return; var SAMP=["안녕! 오늘 뭐 해?","나 불렀어? 무슨 일이야!","…그래, 알겠어.","기념일까지 사흘 남았어!"]; say(tk,pickLine(t,(t.lines&&t.lines.length?t.lines:SAMP),"bb")||SAMP[0],false,t,"speech"); }
+var PFIELDS=["motion","fx","bubble","face"];
+/* 성격을 처음 고를 때 원래 반응을 기억해 두고, 다시 누르면 그대로 되돌려요 */
+function clearPersona(t){
+  var snap=t.prePersona; delete t.persona; delete t.prePersona; if(!snap) return;
+  Object.keys(snap).forEach(function(k){ PFIELDS.forEach(function(f){ if(snap[k][f]!==undefined) Z.set(t,k,f,snap[k][f]); }); });
+}
 function applyPersona(t,pid){
-  var P=PERSONAS.filter(function(x){return x[0]===pid})[0]; if(!P) return; t.persona=pid; var has2=!!Z.faceSrc(t,"head2");
+  var P=PERSONAS.filter(function(x){return x[0]===pid})[0]; if(!P) return;
+  if(!t.persona&&!t.prePersona){ var snap={}; Z.zonesFor(t).forEach(function(k){ var z=Z.get(t,k)||{}; snap[k]={}; PFIELDS.forEach(function(f){ if(z[f]!=null) snap[k][f]=z[f]; }); }); t.prePersona=snap; }
+  t.persona=pid; var has2=!!Z.faceSrc(t,"head2");
   Z.zonesFor(t).forEach(function(k){ var part=["hand","foot","ear","tail"].indexOf(k)>=0;
     Z.set(t,k,"motion",part?"none":P[3]); Z.set(t,k,"fx",P[4]); Z.set(t,k,"bubble",(k==="ear"&&pid!=="dreamy")?"shout":P[5]); Z.set(t,k,"face",(has2&&(k==="head"||k==="face"||k==="all"))?"head2":"head1"); });
 }
@@ -234,13 +242,14 @@ var BUBICON={sign:'<rect x="2.5" y="1.5" width="15" height="8.5" rx="1.6" fill="
   speech:'<path d="M4 2h12a3 3 0 013 3v4a3 3 0 01-3 3H9l-4 3v-3H4a3 3 0 01-3-3V5a3 3 0 013-3z" fill="none" stroke="currentColor" stroke-width="1.4"/>',
   shout:'<path d="M10 .8l1.6 2.6 3-1.2-.4 3.1 3.1.9-2.3 2.1 2.3 2.2-3.1.6.6 3.1-3-1.1-1.8 2.6-1.6-2.7-3 1 .5-3.1-3.1-.8 2.4-2.1-2.2-2.3 3.1-.7-.5-3.1 3 1.3z" fill="currentColor" opacity=".85"/>',
   thought:'<rect x="1.4" y="1.6" width="17.2" height="9.6" rx="4.8" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8.6" cy="13" r="1.3" fill="currentColor"/><circle cx="6.4" cy="15" r=".8" fill="currentColor"/>',
+  sfx:'<text x="10" y="13" text-anchor="middle" font-size="13" font-weight="900" fill="currentColor" font-family="DDSfx,sans-serif" transform="rotate(-8 10 9)">쾅</text>',
   imagine:'<rect x="1.4" y="2.2" width="17.2" height="11.6" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray=".1 2.6" stroke-linecap="round"/>'};
 function drawZones(){ var t=tokById(SEL), cv=$("#zov"), cv2=$("#zov2"); if(!t||(!cv&&!cv2)) return; Z.build(t).then(function(map){ ZMAP=map; if(cv&&$("#zov")===cv) Z.paint(map,cv); if(cv2&&$("#zov2")===cv2) Z.paint(map,cv2); }); }
 function lineGroups(t){ var L=Z.zonesFor(t||{}).map(function(k){ var zz=zoneInfo(k); return [k,(k==="all"?"눌렀을 때":zz[3]+" 눌렀을 때"),zz[2]]; });
   return L.concat([["any","공통 대사","","어느 부위를 눌러도 부위 대사와 섞여서 나와요"],["idle","혼잣말","","가만히 두면 가끔 혼자 말해요"]]); }
 function getLines(t,g){ if(g==="any") return t.lines||(t.lines=[]); if(g==="idle") return t.idleLines||(t.idleLines=[]); t.zones=t.zones||{}; t.zones[g]=t.zones[g]||{}; return t.zones[g].lines||(t.zones[g].lines=[]); }
 function lineDef(t,g){ if(g==="idle") return "thought"; if(g==="any") return "speech"; return Z.get(t,g).bubble||"speech"; }
-var BUB_NAME={speech:"말풍선",memo:"포스트잇",shout:"놀람",thought:"생각",imagine:"상상"};
+var BUB_NAME={speech:"말풍선",memo:"포스트잇",shout:"놀람",thought:"생각",imagine:"상상",sfx:"효과음 글씨"};
 function linesSub(t){
   return '<p class="note" style="margin-bottom:12px">한 칸에 대사 하나예요. 왼쪽 말풍선 버튼을 누르면 그 줄만 모양이 바뀌어요. 중간에 <b>//</b> 를 넣으면 두 번에 나눠 말해요.</p>'+
     lineGroups(t).map(function(g){
@@ -343,7 +352,10 @@ function pairView(){
   var h='<div class="wrap"><div class="h1">페어</div><p class="lead">함께 묶어 둔 캐릭터들이에요. 기념일을 붙일 때 페어 단위로 고를 수 있어요.</p>';
   if(!S.pairs.length&&S.tokens.length>=2) h+='<div class="empty">아직 묶은 페어가 없어요.</div>';
   h+=S.pairs.map(function(p){
-    return '<div class="box" data-pair="'+p.id+'"><div class="box-t"><input class="in" data-pf="name" value="'+esc(p.name)+'" placeholder="페어 이름" style="font-weight:700;max-width:280px"><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+'</button></div><div class="mem">'+S.tokens.map(function(t){ return '<button data-mem="'+t.id+'"'+(p.tokenIds.indexOf(t.id)>=0?' class="on"':"")+'><span class="av" style="background:'+tint(t.color,.2)+'">'+tokPreview(t)+"</span>"+esc(t.nick||t.name)+"</button>"; }).join("")+"</div></div>";
+    var two=p.tokenIds.filter(function(id){return tokById(id)}).slice(0,2), duoOn=S.settings.duo===p.id, nmA=two[0]?(tokById(two[0]).nick||tokById(two[0]).name):"A", nmB=two[1]?(tokById(two[1]).nick||tokById(two[1]).name):"B";
+    var duo=window.__TAURI__?'<div class="duo"><div class="duo-h"><b>바탕화면에 둘이 같이</b><span class="note">'+(two.length<2?"캐릭터를 두 명 고르면 켤 수 있어요":duoOn?"지금 "+esc(nmA)+" · "+esc(nmB)+" 둘이 나와 있어요":"켜면 바탕화면에 둘이 나란히 나와서 가끔 서로 이야기해요")+'</span><button class="btn'+(duoOn?"":" pri")+'" data-act="pduo"'+(two.length<2?" disabled":"")+'>'+(duoOn?"끄기":"같이 띄우기")+'</button></div>':'<div class="duo"><div class="duo-h"><b>둘이 나누는 대화</b><span class="note">PC 앱에서 둘을 바탕화면에 같이 띄우면 이 대화를 주고받아요</span></div>';
+    duo+='<textarea class="in duo-t" data-pf="talks" rows="6" placeholder="'+esc(nmA)+': 오늘 뭐 했어?\n'+esc(nmB)+': 너 기다렸지!\n\n'+esc(nmA)+': {B}!\n'+esc(nmB)+': 왜~\n'+esc(nmA)+': 그냥 불러 봤어">'+esc(p.talks||"")+'</textarea><p class="note">한 줄에 한 마디, <b>이름: 대사</b>로 적어요. 빈 줄로 대화를 나눠요. 이름을 안 쓰면 번갈아 말해요. {A} {B}는 두 사람 이름으로 바뀌어요. 비워 두면 기본 대화를 써요.</p>'+(window.__TAURI__&&duoOn?'<div class="btns"><button class="btn" data-act="ptalk">지금 대화 들어 보기</button></div>':"")+"</div>";
+    return '<div class="box" data-pair="'+p.id+'"><div class="box-t"><input class="in" data-pf="name" value="'+esc(p.name)+'" placeholder="페어 이름" style="font-weight:700;max-width:280px"><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+'</button></div><div class="mem">'+S.tokens.map(function(t){ return '<button data-mem="'+t.id+'"'+(p.tokenIds.indexOf(t.id)>=0?' class="on"':"")+'><span class="av" style="background:'+tint(t.color,.2)+'">'+tokPreview(t)+"</span>"+esc(t.nick||t.name)+"</button>"; }).join("")+"</div>"+duo+"</div>";
   }).join("");
   if(S.tokens.length<2) return h+'<div class="box"><p class="note">페어를 묶으려면 캐릭터가 두 명 이상 있어야 해요. 지금은 '+S.tokens.length+'명이에요.</p><div class="btns" style="margin-top:10px"><button class="btn pri" data-act="new">＋ 캐릭터 추가</button></div></div></div>';
   return h+'<button class="btn" data-act="pnew">＋ 새 페어 묶기</button></div>';
@@ -704,7 +716,7 @@ app.addEventListener("click",function(e){
   var zt=e.target.closest("[data-ztest]"); if(zt&&t){ var tk2=$("#zst .tok"); if(tk2){ pokeAt(tk2,t,zt.dataset.ztest); app.scrollTo({top:0,behavior:"smooth"}); } return; }
   var zm=e.target.closest("[data-zm]"); if(zm){ var a1=zk(zm,"data-zm"); Z.set(t,a1[0],"motion",a1[1]); saveSoon(); render(); return; }
   var zx=e.target.closest("[data-zx]"); if(zx){ var a2=zk(zx,"data-zx"); Z.set(t,a2[0],"fx",a2[1]); saveSoon(); render(); return; }
-  var ps=e.target.closest("[data-persona]"); if(ps&&t){ applyPersona(t,ps.dataset.persona); saveSoon(true); render(); var tkp=$("#zst .tok"); if(tkp){ var zz=Z.zonesFor(t); pokeAt(tkp,t,zz[0]); } return; }
+  var ps=e.target.closest("[data-persona]"); if(ps&&t){ if(t.persona===ps.dataset.persona){ clearPersona(t); toast("성격 고정을 풀었어요 · 원래 반응으로 돌아가요"); } else applyPersona(t,ps.dataset.persona); saveSoon(true); render(); var tkp=$("#zst .tok"); if(tkp){ var zz=Z.zonesFor(t); pokeAt(tkp,t,zz[0]); } return; }
   var vc=e.target.closest("[data-voice]"); if(vc&&t){ t.voice=vc.dataset.voice; saveSoon(true); render(); var cv=S.settings||{}; if(t.voice!=="mix") Z.sound(t.voice,typeof cv.volume==="number"?cv.volume:.5); return; }
   var bb=e.target.closest("[data-babble]"); if(bb&&t){ t.babble=bb.dataset.babble; saveSoon(true); render(); var tkb2=$("#zst .tok"); if(tkb2&&t.babble!=="none"){ var SAMP=["안녕! 오늘 뭐 해?","나 불렀어? 무슨 일이야!","…그래, 알겠어.","기념일까지 사흘 남았어!"]; say(tkb2,pickLine(t,(t.lines&&t.lines.length?t.lines:SAMP),"bb")||SAMP[0],false,t,"speech"); } return; }
   var lg=e.target.closest("[data-lgsel]"); if(lg){ LGSEL=lg.dataset.lgsel; render(); return; }
@@ -714,7 +726,7 @@ app.addEventListener("click",function(e){
   var gl=e.target.closest("[data-golines]"); if(gl){ SUB="talk"; LGSEL=gl.dataset.golines; render(); return; }
   var la=e.target.closest("[data-lnadd]"); if(la){ var g=la.dataset.lnadd; getLines(t,g).push(""); saveSoon(); render(); var ins=$$('#lg-'+g+' [data-ln]'); if(ins.length) ins[ins.length-1].focus(); return; }
   var lb=e.target.closest("[data-lnb]"); if(lb){ var a7=zk(lb,"data-lnb"), arr7=getLines(t,a7[0]), def7=lineDef(t,a7[0]), p7=Z.parseLine(arr7[+a7[1]],def7);
-    var order=["auto","shout","thought","imagine","speech"], curS=p7.auto?"auto":p7.style, nx=order[(order.indexOf(curS)+1)%order.length]; if(nx===def7&&nx!=="auto") nx=order[(order.indexOf(nx)+1)%order.length];
+    var order=["auto","shout","thought","imagine","sfx","speech"], curS=p7.auto?"auto":p7.style, nx=order[(order.indexOf(curS)+1)%order.length]; if(nx===def7&&nx!=="auto") nx=order[(order.indexOf(nx)+1)%order.length];
     arr7[+a7[1]]=nx==="auto"?p7.text:Z.composeLine(nx,p7.text); saveSoon(); render(); var tk5=$("#zst .tok"); if(tk5&&p7.text) say(tk5,arr7[+a7[1]],false,t,def7); return; }
   var ld=e.target.closest("[data-lndel]"); if(ld){ var a4=zk(ld,"data-lndel"); getLines(t,a4[0]).splice(+a4[1],1); saveSoon(); render(); return; }
   var an=e.target.closest("[data-ann]"); if(an){ openAnn(an.dataset.ann); return; }
@@ -729,7 +741,7 @@ app.addEventListener("click",function(e){
   var ld2=e.target.closest("[data-lead]"); if(ld2){ setCfg("annivLead",+ld2.dataset.lead); render(); return; }
   var th=e.target.closest("[data-theme]"); if(th){ setCfg("theme",th.dataset.theme); render(); return; }
   var sz=e.target.closest("[data-size]"); if(sz){ setSize(+sz.dataset.size); return; }
-  var mm=e.target.closest("[data-mem]"); if(mm){ var p=pairOf(mm), id=mm.dataset.mem, i=p.tokenIds.indexOf(id); if(i>=0) p.tokenIds.splice(i,1); else p.tokenIds.push(id); mm.classList.toggle("on"); saveSoon(); return; }
+  var mm=e.target.closest("[data-mem]"); if(mm){ var p=pairOf(mm), id=mm.dataset.mem, i=p.tokenIds.indexOf(id); if(i>=0) p.tokenIds.splice(i,1); else p.tokenIds.push(id); mm.classList.toggle("on"); saveSoon(); if(S.settings.duo===p.id||p.tokenIds.length<=3) render(); return; }
   var b=e.target.closest("[data-act]"); if(!b) return; var a=b.dataset.act;
   if(a==="new") addChooser();
   if(a==="main"&&t){ setCfg("main",t.id); render(); var pk2=pickNow(); toast(pk2&&pk2.anniv&&pk2.id!==t.id?"기본 캐릭터로 정했어요 · 오늘 기념일이 끝나면 나와요":"기본 캐릭터로 정했어요"); }
@@ -761,6 +773,8 @@ app.addEventListener("click",function(e){
   if(a==="bubreset"&&t){ delete t.bubblePos; saveSoon(true); render(); return; }
   if(a==="zshow"){ SHOWZ=!SHOWZ; b.classList.toggle("on",SHOWZ); var zs=$("#zst"); if(zs) zs.classList.toggle("show",SHOWZ); }
   if(a==="del") ask("'"+(t.nick||t.name||"이 캐릭터")+"'를 지울까요? 되돌릴 수 없어요.","지우기").then(function(ok){ if(!ok) return; var id=SEL; S.tokens=S.tokens.filter(function(z){return z.id!==id}); S.pairs.forEach(function(p){p.tokenIds=p.tokenIds.filter(function(z){return z!==id})}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="token"&&z.who.id===id); }); (S.events||[]).forEach(function(z){ if(z.who&&z.who.type==="token"&&z.who.id===id) z.who=null; if(z.star===id) z.star=null; }); if(S.settings.main===id){ S.settings.main=null; setCfg("main",null); } SEL=null; SUB="basic"; saveSoon(true); render(); toast("지웠어요"); });
+  if(a==="pduo"){ var pd=pairOf(b); setCfg("duo",S.settings.duo===pd.id?"":pd.id); saveSoon(true); render(); toast(S.settings.duo?"바탕화면에 둘이 같이 나와요":"한 명만 나와요"); return; }
+  if(a==="ptalk"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",Date.now()); },300); return; }
   if(a==="pnew"){ S.pairs.push({id:uid("p"),name:"",tokenIds:[]}); saveSoon(true); render(); }
   if(a==="pdel"){ var p2=pairOf(b); ask("이 페어를 풀까요? 캐릭터는 그대로 남아요.","풀기").then(function(ok){ if(!ok) return; S.pairs=S.pairs.filter(function(z){return z!==p2}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="pair"&&z.who.id===p2.id); }); saveSoon(true); render(); }); }
   if(a==="charexpall"){ if(!S.tokens.length){ toast("내보낼 캐릭터가 없어요"); return; } var all=S.tokens.map(function(x){ var c=JSON.parse(JSON.stringify(x)); delete c._cfg; return c; });
@@ -776,7 +790,7 @@ app.addEventListener("click",function(e){
 function pairOf(el){ var id=el.closest("[data-pair]").dataset.pair; return S.pairs.filter(function(p){return p.id===id})[0]; }
 app.addEventListener("input",function(e){
   var el=e.target, t=cur(); if(el.type==="range") fillRange(el);
-  if(el.dataset.pf){ pairOf(el).name=el.value; saveSoon(); return; }
+  if(el.dataset.pf){ pairOf(el)[el.dataset.pf]=el.value; saveSoon(); return; }
   if(el.id==="ag-memo"){ S.notes=S.notes||{}; if(el.value.trim()) S.notes[DAYSEL]=el.value; else delete S.notes[DAYSEL]; saveSoon(); var c0=$('.dc[data-day="'+DAYSEL+'"]'); if(c0){ var mm=$(".memo2",c0); if(el.value.trim()&&!mm){ c0.insertAdjacentHTML("beforeend",'<span class="memo2"></span>'); } if(!el.value.trim()&&mm) mm.remove(); } return; }
   if(el.dataset.ln){ var a=el.dataset.ln.split("|"), arr=getLines(t,a[0]), p0=Z.parseLine(arr[+a[1]],lineDef(t,a[0])); arr[+a[1]]=p0.auto?el.value:Z.composeLine(p0.style,el.value); saveSoon(); return; }
   if(el.id==="b-y"||el.id==="b-x"){ t.bubblePos=t.bubblePos||{}; var bv=+el.value; t.bubblePos[el.id==="b-y"?"y":"x"]=bv; $("#"+el.id+"-v").textContent=el.id==="b-y"?bubLbl(bv,"위","아래"):bubLbl(bv,"오른쪽","왼쪽"); saveSoon(); clearTimeout(window._bubT); window._bubT=setTimeout(function(){ var tk=$("#zst .tok"); if(tk) say(tk,"여기쯤 떠요",false,t,"speech"); },120); return; }
