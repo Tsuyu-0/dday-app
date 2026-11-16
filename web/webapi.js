@@ -55,7 +55,7 @@
     saveFile: function (name, text) {
       var C = window.Capacitor;
       if (C && C.isNativePlatform && C.isNativePlatform()) {
-        var FS = C.registerPlugin("Filesystem"), SH = C.registerPlugin("Share");
+        var REG = window.ddPlugin || (window.capacitorExports && window.capacitorExports.registerPlugin) || C.registerPlugin, FS = REG("Filesystem"), SH = REG("Share");
         return FS.writeFile({ path: name, data: text, directory: "CACHE", encoding: "utf8" })
           .then(function (r) { return SH.share({ title: name, files: [r.uri], dialogTitle: "파일 보내기 · 저장" }); })
           .then(function () { return true; }).catch(function () { return false; });

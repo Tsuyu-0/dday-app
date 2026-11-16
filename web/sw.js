@@ -1,5 +1,5 @@
 /* 한 번 열면 인터넷 없이도 열리게 */
-var C = "dday-web-v3";
+var C = "dday-web-v4";
 var FILES = ["./", "index.html", "style.css", "mobile.css", "zones.css", "zones.js", "annivs.js", "manager.js", "webapi.js", "native.js", "webui.js", "seed.json", "fonts/suit.woff2", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", function (e) { e.waitUntil(caches.open(C).then(function (c) { return c.addAll(FILES); })); self.skipWaiting(); });
 self.addEventListener("activate", function (e) { e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== C; }).map(function (k) { return caches.delete(k); })); })); self.clients.claim(); });

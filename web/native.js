@@ -4,7 +4,10 @@
   var C = window.Capacitor;
   if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
   document.body.classList.add("native");
-  var AN = null, Widget = C.registerPlugin("DdayWidget"), LN = C.registerPlugin("LocalNotifications");
+  // 플러그인 연결: 캡파시터 코어(capacitor.js)의 registerPlugin → 없으면 Plugins에서 바로
+  var REG = (window.capacitorExports && window.capacitorExports.registerPlugin) || (C.registerPlugin && C.registerPlugin.bind(C)) || function (n) { return (C.Plugins || {})[n]; };
+  window.ddPlugin = REG;
+  var AN = null, Widget = REG("DdayWidget"), LN = REG("LocalNotifications");
   var last = null, t = null, asked = false;
 
   function ymd(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
