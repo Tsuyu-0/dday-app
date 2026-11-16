@@ -76,34 +76,29 @@ jobs:
         with:
           node-version: 22
 
-      - name: PC(윈도우)용 묶기
-        working-directory: desktop
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop-tauri/src-tauri -> target
+
+      - name: PC(윈도우)용 만들기 (Tauri · 가벼운 버전)
+        working-directory: desktop-tauri
         shell: bash
         run: |
-          echo "{\"build\": ${{ env.BUILD }}}" > app/build.json
-          npm ci
+          echo "{\"build\": ${{ env.BUILD }}}" > ../desktop/app/build.json
+          npm install --no-audit --no-fund
           node build.js
-
-      - name: 설치 파일 하나(.exe)로 만들기
-        working-directory: desktop
-        shell: bash
-        run: |
-          npx --yes electron-builder@26 --win nsis --x64 --prepackaged out/AnniversaryDday-win32-x64 --publish never \
-            -c.appId=com.ppangsal.dday -c.electronVersion=38.8.6 -c.productName=AnniversaryDday -c.win.icon=icon.ico \
-            -c.nsis.oneClick=true -c.nsis.perMachine=false -c.nsis.createDesktopShortcut=always \
-            -c.nsis.shortcutName="기념일 D-day" -c.nsis.installerIcon=icon.ico -c.nsis.uninstallDisplayName="기념일 D-day" \
-            -c.nsis.artifactName=AnniversaryDday-Setup.exe -c.directories.output=dist
-          ls -la dist
-
-      - name: 압축본도 같이 (설치 없이 쓰고 싶은 사람용)
-        working-directory: desktop/out
-        shell: pwsh
-        run: Compress-Archive -Path AnniversaryDday-win32-x64 -DestinationPath ../../AnniversaryDday-Windows.zip
+          npx tauri build --config "{\"version\":\"1.0.${{ env.BUILD }}\"}"
+          mkdir -p ../out
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe ../out/AnniversaryDday-Setup.exe
+          cp src-tauri/target/release/AnniversaryDday.exe ../out/AnniversaryDday-Portable.exe 2>/dev/null || cp src-tauri/target/release/anniversary-dday.exe ../out/AnniversaryDday-Portable.exe
+          ls -la ../out
 
       - name: 같은 다운로드 링크에 PC 버전 추가
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ env.BUILD }}
           files: |
-            desktop/dist/AnniversaryDday-Setup.exe
-            AnniversaryDday-Windows.zip
+            out/AnniversaryDday-Setup.exe
+            out/AnniversaryDday-Portable.exe
