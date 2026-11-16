@@ -667,8 +667,8 @@ body.otaku .mtile{border-radius:7px;border:1.5px solid var(--il)}
 .dlg2-h .ib{margin-left:auto}
 .dlg2-h .lk{font-size:12px;font-weight:700;color:var(--acc)}
 .dl-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.dl-row.b{padding-left:26px}
-.dl-who{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 4px;border-radius:99px;border:1px solid var(--line2);background:var(--card,#fff);font-size:12.5px;font-weight:700;max-width:120px}
+
+.dl-who{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;width:112px;padding:0 10px 0 4px;border-radius:99px;border:1px solid var(--line2);background:var(--card,#fff);font-size:12.5px;font-weight:700}
 .dl-row .dl-who{border-color:#9fb4ff;background:#eef3ff}
 .dl-row.b .dl-who{border-color:#ffb3cb;background:#fff0f5}
 .dl-who .av{width:26px;height:26px;border-radius:50%;overflow:hidden;position:relative;flex:none;background:rgba(0,0,0,.04)}
