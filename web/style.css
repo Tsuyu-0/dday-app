@@ -656,3 +656,8 @@ body.otaku .mtile{border-radius:7px;border:1.5px solid var(--il)}
 .duo-h .note{flex:1;min-width:160px;margin:0}
 .duo-h .btn{margin-left:auto}
 .duo-t{width:100%;min-height:110px;resize:vertical;font-size:13px;line-height:1.6;padding:10px 12px;font-family:inherit;box-sizing:border-box}
+.ptks{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px}
+.ptk{display:flex;gap:8px;align-items:flex-start}
+.ptk .duo-t{flex:1;height:auto;min-height:58px;field-sizing:content;max-height:220px}
+.ptk-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accs);color:var(--acc);font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:8px}
+.ptk .ib{margin-top:4px}

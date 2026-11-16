@@ -191,7 +191,7 @@
   setInterval(function () { if (!S) return; var d = A.ymd(new Date()); if (d !== lastDay) { lastDay = d; syncPets(); pushToManager(); } }, 30000);
 
   /* ---------- 둘이 나누는 대화 ---------- */
-  var DEF_TALKS = "{A}: 오늘 뭐 했어?\n{B}: 너 기다렸지!\n\n{A}: 배고프지 않아?\n{B}: 방금 그 말 기다렸어\n\n{B}: 나 오늘 좀 멋있지?\n{A}: ...응, 쪼끔\n\n{A}: {B}!\n{B}: 왜~\n{A}: 그냥 불러 봤어\n\n{B}: 졸려...\n{A}: 조금만 더 버티자\n\n{A}: 여기 화면 넓다\n{B}: 같이 있으니까 좁은데?";
+  var DEF_TALKS = "{A}: 오늘 뭐 했어?\n{B}: 너 기다렸지!\n\n{A}: 배고프지 않아?\n{B}: 방금 그 말 기다렸어\n\n{B}: 나 오늘 좀 멋있지?\n{A}: ...응, 쪼끔\n\n{A}: {B}!\n{B}: 왜~\n{A}: 그냥 불러 봤어\n\n{B}: 졸려...\n{A}: 조금만 더 버티자\n\n{A}: 여기 화면 넓다\n{B}: 같이 있으니까 좁은데?\n\n{A}: *두근두근\n{B}: 무슨 소리야?\n{A}: 아, 아무것도 아니야!\n\n{B}: 우리 산책 갈래?\n{A}: 바탕화면 밖으로는 못 나가잖아\n{B}: 그럼 여기서 한 바퀴!\n\n{A}: 오늘 날씨 어때?\n{B}: 너랑 있어서 맑음\n\n{B}: *쾅!\n{A}: 깜짝이야!\n{B}: 헤헤 놀랐지\n\n{A}: 일 열심히 하네\n{B}: 우리도 응원하자\n{A}: 화이팅!\n\n{B}: 심심해~\n{A}: 그럼 나랑 놀자";
   function nameOf(id) { var t = tok(id); return t ? (t.nick || t.name || "") : ""; }
   function parseTalks(text, ids) {
     var nA = nameOf(ids[0]), nB = nameOf(ids[1]);

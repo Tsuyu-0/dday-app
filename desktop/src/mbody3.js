@@ -301,13 +301,17 @@ function annDialog(a,presetWho,presetDate){
 }
 
 /* ---------- 페어 / 설정 ---------- */
+var DUO_DEF=["{A}: 오늘 뭐 했어?\n{B}: 너 기다렸지!","{A}: 배고프지 않아?\n{B}: 방금 그 말 기다렸어","{B}: 나 오늘 좀 멋있지?\n{A}: ...응, 쪼끔","{A}: {B}!\n{B}: 왜~\n{A}: 그냥 불러 봤어","{B}: 졸려...\n{A}: 조금만 더 버티자","{A}: 여기 화면 넓다\n{B}: 같이 있으니까 좁은데?","{A}: *두근두근\n{B}: 무슨 소리야?\n{A}: 아, 아무것도 아니야!","{B}: 우리 산책 갈래?\n{A}: 바탕화면 밖으로는 못 나가잖아\n{B}: 그럼 여기서 한 바퀴!","{A}: 오늘 날씨 어때?\n{B}: 너랑 있어서 맑음","{B}: *쾅!\n{A}: 깜짝이야!\n{B}: 헤헤 놀랐지","{A}: 일 열심히 하네\n{B}: 우리도 응원하자\n{A}: 화이팅!","{B}: 심심해~\n{A}: 그럼 나랑 놀자"];
 function pairView(){
   var h='<div class="wrap"><div class="h1">페어</div><p class="lead">함께 묶어 둔 캐릭터들이에요. 기념일을 붙일 때 페어 단위로 고를 수 있어요.</p>';
   if(!S.pairs.length&&S.tokens.length>=2) h+='<div class="empty">아직 묶은 페어가 없어요.</div>';
   h+=S.pairs.map(function(p){
     var two=p.tokenIds.filter(function(id){return tokById(id)}).slice(0,2), duoOn=S.settings.duo===p.id, nmA=two[0]?(tokById(two[0]).nick||tokById(two[0]).name):"A", nmB=two[1]?(tokById(two[1]).nick||tokById(two[1]).name):"B";
     var duo=window.__TAURI__?'<div class="duo"><div class="duo-h"><b>바탕화면에 둘이 같이</b><span class="note">'+(two.length<2?"캐릭터를 두 명 고르면 켤 수 있어요":duoOn?"지금 "+esc(nmA)+" · "+esc(nmB)+" 둘이 나와 있어요":"켜면 바탕화면에 둘이 나란히 나와서 가끔 서로 이야기해요")+'</span><button class="btn'+(duoOn?"":" pri")+'" data-act="pduo"'+(two.length<2?" disabled":"")+'>'+(duoOn?"끄기":"같이 띄우기")+'</button></div>':'<div class="duo"><div class="duo-h"><b>둘이 나누는 대화</b><span class="note">PC 앱에서 둘을 바탕화면에 같이 띄우면 이 대화를 주고받아요</span></div>';
-    duo+='<textarea class="in duo-t" data-pf="talks" rows="6" placeholder="'+esc(nmA)+': 오늘 뭐 했어?\n'+esc(nmB)+': 너 기다렸지!\n\n'+esc(nmA)+': {B}!\n'+esc(nmB)+': 왜~\n'+esc(nmA)+': 그냥 불러 봤어">'+esc(p.talks||"")+'</textarea><p class="note">한 줄에 한 마디, <b>이름: 대사</b>로 적어요. 빈 줄로 대화를 나눠요. 이름을 안 쓰면 번갈아 말해요. {A} {B}는 두 사람 이름으로 바뀌어요. 대사 앞에 *를 붙이면 효과음 글씨(예: 민둥이: *쾅!)로 나와요. 비워 두면 기본 대화를 써요.</p>'+(window.__TAURI__&&duoOn?'<div class="btns"><button class="btn" data-act="ptalk">지금 대화 들어 보기</button></div>':"")+"</div>";
+    var blocks=String(p.talks||"").replace(/\r/g,"").split(/\n\s*\n/).filter(function(x){return x.trim()});
+    duo+='<div class="lbl" style="margin-top:4px">둘이 나누는 대화 <span class="note" style="font-weight:400">'+(blocks.length?blocks.length+"개 · 가끔 그중 하나를 골라 주고받아요":"아직 없어서 기본 대화 "+DUO_DEF.length+"개를 써요")+'</span></div><div class="ptks">'+blocks.map(function(bk,i){ return '<div class="ptk"><span class="ptk-n">'+(i+1)+'</span><textarea class="in duo-t" data-ptk="'+i+'" rows="'+Math.max(2,Math.min(6,bk.split("\n").length))+'">'+esc(bk)+'</textarea><button class="ib" data-act="ptkdel" data-i="'+i+'" title="이 대화 지우기">'+X+'</button></div>'; }).join("")+'</div>';
+    duo+='<div class="btns"><button class="btn" data-act="ptkadd">＋ 대화 추가</button>'+(blocks.length?"":'<button class="btn" data-act="ptkdef">기본 대화 불러와서 고치기</button>')+(window.__TAURI__&&duoOn?'<button class="btn" data-act="ptalk">지금 대화 들어 보기</button>':"")+'</div>';
+    duo+='<p class="note">칸 하나가 대화 하나예요. 한 줄에 한 마디씩 <b>이름: 대사</b>로 적고, 이름을 안 쓰면 번갈아 말해요. {A} {B}는 '+esc(nmA)+' · '+esc(nmB)+'로 바뀌고, 대사 앞에 *를 붙이면 효과음 글씨(예: '+esc(nmA)+': *쾅!)로 나와요.</p></div>';
     return '<div class="box" data-pair="'+p.id+'"><div class="box-t"><input class="in" data-pf="name" value="'+esc(p.name)+'" placeholder="페어 이름" style="font-weight:700;max-width:280px"><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+'</button></div><div class="mem">'+S.tokens.map(function(t){ return '<button data-mem="'+t.id+'"'+(p.tokenIds.indexOf(t.id)>=0?' class="on"':"")+'><span class="av" style="background:'+tint(t.color,.2)+'">'+tokPreview(t)+"</span>"+esc(t.nick||t.name)+"</button>"; }).join("")+"</div>"+duo+"</div>";
   }).join("");
   if(S.tokens.length<2) return h+'<div class="box"><p class="note">페어를 묶으려면 캐릭터가 두 명 이상 있어야 해요. 지금은 '+S.tokens.length+'명이에요.</p><div class="btns" style="margin-top:10px"><button class="btn pri" data-act="new">＋ 캐릭터 추가</button></div></div></div>';
@@ -727,6 +731,11 @@ app.addEventListener("click",function(e){
   if(a==="zshow"){ SHOWZ=!SHOWZ; b.classList.toggle("on",SHOWZ); var zs=$("#zst"); if(zs) zs.classList.toggle("show",SHOWZ); }
   if(a==="del") ask("'"+(t.nick||t.name||"이 캐릭터")+"'를 지울까요? 되돌릴 수 없어요.","지우기").then(function(ok){ if(!ok) return; var id=SEL; S.tokens=S.tokens.filter(function(z){return z.id!==id}); S.pairs.forEach(function(p){p.tokenIds=p.tokenIds.filter(function(z){return z!==id})}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="token"&&z.who.id===id); }); (S.events||[]).forEach(function(z){ if(z.who&&z.who.type==="token"&&z.who.id===id) z.who=null; if(z.star===id) z.star=null; }); if(S.settings.main===id){ S.settings.main=null; setCfg("main",null); } SEL=null; SUB="basic"; saveSoon(true); render(); toast("지웠어요"); });
   if(a==="pduo"){ var pd=pairOf(b); setCfg("duo",S.settings.duo===pd.id?"":pd.id); saveSoon(true); render(); toast(S.settings.duo?"바탕화면에 둘이 같이 나와요":"한 명만 나와요"); return; }
+  if(a==="ptkadd"||a==="ptkdel"||a==="ptkdef"){ var pq=pairOf(b), bl=String(pq.talks||"").split(/\n\s*\n/).filter(function(x){return x.trim()});
+    if(a==="ptkdel") bl.splice(+b.dataset.i,1); if(a==="ptkdef") bl=DUO_DEF.slice();
+    pq.talks=bl.join("\n\n"); saveSoon(true); render();
+    if(a==="ptkadd"){ var tas=$$('[data-pair="'+pq.id+'"] .ptks textarea'); var box0=$('[data-pair="'+pq.id+'"] .ptks'); if(box0){ box0.insertAdjacentHTML("beforeend",'<div class="ptk"><span class="ptk-n">'+(tas.length+1)+'</span><textarea class="in duo-t" data-ptk="'+tas.length+'" rows="2" placeholder="이름: 대사"></textarea></div>'); var nt=$('[data-ptk="'+tas.length+'"]',box0); if(nt) nt.focus(); } }
+    return; }
   if(a==="ptalk"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",Date.now()); },300); return; }
   if(a==="pnew"){ S.pairs.push({id:uid("p"),name:"",tokenIds:[]}); saveSoon(true); render(); }
   if(a==="pdel"){ var p2=pairOf(b); ask("이 페어를 풀까요? 캐릭터는 그대로 남아요.","풀기").then(function(ok){ if(!ok) return; S.pairs=S.pairs.filter(function(z){return z!==p2}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="pair"&&z.who.id===p2.id); }); saveSoon(true); render(); }); }
@@ -744,6 +753,7 @@ function pairOf(el){ var id=el.closest("[data-pair]").dataset.pair; return S.pai
 app.addEventListener("input",function(e){
   var el=e.target, t=cur(); if(el.type==="range") fillRange(el);
   if(el.dataset.pf){ pairOf(el)[el.dataset.pf]=el.value; saveSoon(); return; }
+  if(el.dataset.ptk!=null){ var pk=pairOf(el); pk.talks=$$("[data-ptk]",el.closest("[data-pair]")).map(function(x){return x.value.replace(/\n\s*\n/g,"\n").trim()}).filter(Boolean).join("\n\n"); saveSoon(); return; }
   if(el.id==="ag-memo"){ S.notes=S.notes||{}; if(el.value.trim()) S.notes[DAYSEL]=el.value; else delete S.notes[DAYSEL]; saveSoon(); var c0=$('.dc[data-day="'+DAYSEL+'"]'); if(c0){ var mm=$(".memo2",c0); if(el.value.trim()&&!mm){ c0.insertAdjacentHTML("beforeend",'<span class="memo2"></span>'); } if(!el.value.trim()&&mm) mm.remove(); } return; }
   if(el.dataset.ln){ var a=el.dataset.ln.split("|"), arr=getLines(t,a[0]), p0=Z.parseLine(arr[+a[1]],lineDef(t,a[0])); arr[+a[1]]=p0.auto?el.value:Z.composeLine(p0.style,el.value); saveSoon(); return; }
   if(el.id==="b-y"||el.id==="b-x"){ t.bubblePos=t.bubblePos||{}; var bv=+el.value; t.bubblePos[el.id==="b-y"?"y":"x"]=bv; $("#"+el.id+"-v").textContent=el.id==="b-y"?bubLbl(bv,"위","아래"):bubLbl(bv,"오른쪽","왼쪽"); saveSoon(); clearTimeout(window._bubT); window._bubT=setTimeout(function(){ var tk=$("#zst .tok"); if(tk) say(tk,"여기쯤 떠요",false,t,"speech"); },120); return; }
