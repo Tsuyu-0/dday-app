@@ -53,6 +53,40 @@ public class OverlayService extends Service {
     String greet = "", name = "";
     ObjectAnimator breathe;
     int sizePx;
+    /* 돌아다니기: 지금 높이에서 좌우로 통통 튀며 걸어요 */
+    boolean wander = false, touching = false; float wSpeed = 1f; long quietUntil = 0; ValueAnimator walker;
+    final Runnable wanderTick = new Runnable() { @Override public void run() {
+        h.postDelayed(this, 6000 + rnd.nextInt(8000));
+        if (!wander || root == null || walker != null || touching || System.currentTimeMillis() < quietUntil) return;
+        if (bub.getVisibility() == View.VISIBLE || menu.getVisibility() == View.VISIBLE || rnd.nextFloat() < .3f) return;
+        walk();
+    } };
+    void walk() {
+        int sw = getResources().getDisplayMetrics().widthPixels, rw = Math.max(root.getWidth(), sizePx);
+        final int x0 = lp.x, dist = Math.round((150 + rnd.nextFloat() * 370) * getResources().getDisplayMetrics().density);
+        int t = x0 + (rnd.nextBoolean() ? dist : -dist); t = Math.max(0, Math.min(sw - rw, t));
+        if (Math.abs(t - x0) < dp(40)) return;
+        final int target = t, dir = target > x0 ? 1 : -1;
+        final float hopLen = dp(40) * wSpeed, hopMs = 430f / (float) Math.sqrt(wSpeed);
+        final int hops = Math.max(1, Math.round(Math.abs(target - x0) / hopLen));
+        walker = ValueAnimator.ofFloat(0f, 1f); walker.setDuration((long) (hops * hopMs)); walker.setInterpolator(null);
+        walker.addUpdateListener(a -> {
+            float k = (float) a.getAnimatedValue(), el = k * hops * hopMs, ph = (el % hopMs) / hopMs;
+            float up = (float) Math.sin(Math.min(1f, ph) * Math.PI), sq = ph < .12f ? 1f - (.12f - ph) * .6f : 1f;
+            img.setTranslationY(-up * dp(12)); img.setScaleX((dir > 0 ? -1f : 1f) * (2f - sq));
+            lp.x = Math.round(x0 + (target - x0) * k); try { wm.updateViewLayout(root, lp); } catch (Exception ex) { }
+        });
+        walker.addListener(new android.animation.AnimatorListenerAdapter() {
+            boolean done = false;
+            void fin() { if (done) return; done = true; walker = null; img.setTranslationY(0); img.setScaleX(dir > 0 ? -1f : 1f);
+                h.postDelayed(() -> { if (walker == null) img.setScaleX(1f); }, 1600);
+                getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", lp.x).apply(); }
+            @Override public void onAnimationEnd(android.animation.Animator a) { fin(); }
+            @Override public void onAnimationCancel(android.animation.Animator a) { fin(); }
+        });
+        walker.start();
+    }
+    void stopWalk() { if (walker != null) walker.cancel(); }
 
     static boolean canDraw(Context c) { return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c); }
 
@@ -81,7 +115,7 @@ public class OverlayService extends Service {
         String a = intent != null ? intent.getAction() : null;
         if (ACT_STOP.equals(a)) { getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putBoolean("overlayOn", false).apply(); stopSelf(); return START_NOT_STICKY; }
         if (!canDraw(this)) { stopSelf(); return START_NOT_STICKY; }
-        if (root == null) { build(); load(); h.postDelayed(() -> say(greet.isEmpty() ? pick() : greet), 1200); }
+        if (root == null) { build(); load(); h.postDelayed(() -> say(greet.isEmpty() ? pick() : greet), 1200); h.postDelayed(wanderTick, 7000); }
         else load();
         return START_STICKY;
     }
@@ -122,6 +156,7 @@ public class OverlayService extends Service {
             @Override public boolean onTouch(View v, MotionEvent e) {
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
+                        stopWalk(); touching = true; quietUntil = System.currentTimeMillis() + 5000;
                         sx = e.getRawX(); sy = e.getRawY(); ox = lp.x; oy = lp.y; drag = false; longed = false; t0 = System.currentTimeMillis();
                         h.postDelayed(lpress, 550); return true;
                     case MotionEvent.ACTION_MOVE:
@@ -131,7 +166,7 @@ public class OverlayService extends Service {
                         return true;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        h.removeCallbacks(lpress);
+                        h.removeCallbacks(lpress); touching = false; quietUntil = System.currentTimeMillis() + 5000;
                         if (drag) getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", lp.x).putInt("ovY", lp.y).apply();
                         else if (!longed && e.getActionMasked() == MotionEvent.ACTION_UP) { hideMenu(); hop(); say(pick()); }
                         return true;
@@ -162,6 +197,7 @@ public class OverlayService extends Service {
     };
     Runnable typer;
     void say(String s) {
+        stopWalk(); quietUntil = System.currentTimeMillis() + 4000;
         if (bub == null || s == null || s.isEmpty()) return;
         h.removeCallbacks(hideBub); if (typer != null) h.removeCallbacks(typer);
         hideMenu();
@@ -203,6 +239,7 @@ public class OverlayService extends Service {
                 JSONArray ls = ov.optJSONArray("lines");
                 if (ls != null) for (int i = 0; i < ls.length(); i++) { String s = ls.optString(i, "").trim(); if (!s.isEmpty()) lines.add(s); }
                 greet = ov.optString("greet", ""); name = ov.optString("name", "");
+                wander = ov.optBoolean("wander", false); wSpeed = (float) ov.optDouble("wspeed", 1); if (wSpeed <= 0) wSpeed = 1;
                 voice = ov.optString("voice", ""); vPitch = (float) ov.optDouble("pitch", 0); vSpeed = (float) ov.optDouble("speed", 1); vVol = (float) ov.optDouble("vol", .6);
             }
         } catch (Exception e) { }

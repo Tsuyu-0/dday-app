@@ -141,7 +141,8 @@ function basicSub(t){
     tile("o-br",m.breathe!==false,"숨쉬기 모션","가만히 있어도 살짝살짝 움직여요")+
     tile("o-tilt",!!m.idleTilt,"가끔 고개 까딱","가만히 있다가 고개를 좌우로 까딱까딱해요")+
     tile("o-shadow",!d.noShadow,"발밑 그림자","캐릭터 밑에 동그란 그림자를 깔아요")+
-    "</div></div>"+bubBox(t)+
+    tile("o-wander",!!d.wander,"돌아다니기","시메지처럼 화면 아래를 통통 튀며 걸어 다녀요")+
+    "</div>"+(d.wander?'<div class="lbl" style="margin-top:12px">걸음 빠르기</div><div class="chips">'+[[.7,"느릿느릿"],[1,"보통"],[1.4,"총총"]].map(function(v){ return '<button data-tile="o-wspd-'+v[0]+'"'+((d.wanderSpeed||1)===v[0]?' class="on"':"")+">"+v[1]+"</button>"; }).join("")+'</div><p class="note" style="margin-top:6px">마우스를 올리거나 말하는 중에는 멈춰요. 같은 페어가 같이 돌아다니면 가끔 서로 찾아가요.</p>':"")+"</div>"+bubBox(t)+
     '<div class="box"><div class="box-t">내보내기<small>그림 · 성격 · 말소리 · 대사까지 파일 하나로</small></div><p class="note" style="margin-bottom:10px">다른 컴퓨터나 폰(웹앱)으로 옮기거나 친구에게 줄 때 써요. 받은 쪽은 [설정 → 캐릭터 불러오기]로 넣어요. 기념일은 생일만 함께 가요.</p><div class="btns"><button class="btn" data-act="charexp">캐릭터 파일 만들기</button></div></div>'+
     '<div class="btns" style="justify-content:flex-end"><button class="btn ghost danger" data-act="del">이 캐릭터 지우기</button></div>';
 }
@@ -449,7 +450,7 @@ function dialogBox(p,ids,duoOn){
         return '<div class="dl-row"><button class="dl-who" style="border-color:'+cl[0]+';background:'+cl[1]+'" data-act="dlwho" data-i="'+i+'" data-j="'+j+'" title="누르면 말하는 사람이 바뀌어요">'+who(w)+'</button><input class="in dl-t" data-dl="'+i+"|"+j+'" value="'+esc(l.t)+'" placeholder="대사"><button class="dl-sty s-'+(l.s||"speech")+'" data-act="dlsty" data-i="'+i+'" data-j="'+j+'" title="누르면 말풍선 모양이 바뀌어요">'+sty[1]+'</button><button class="dl-sty dl-mo'+(l.m?" on":"")+'" data-act="dlmo" data-i="'+i+'" data-j="'+j+'" title="누르면 몸짓이 바뀌어요">'+mo[1]+'</button><button class="ib" data-act="dldel" data-i="'+i+'" data-j="'+j+'" title="이 줄 지우기">'+X+"</button></div>"; }).join("")+
       '<button class="dl-add" data-act="dladd" data-i="'+i+'">＋ 한 마디</button></div>';
   }).join("")+"</div>";
-  h+='<div class="chips" style="margin:2px 0 8px"><button data-act="dlauto"'+(p.duoAuto!==false?' class="on"':"")+'>저절로 대화하기 '+(p.duoAuto!==false?"켬":"끔")+'</button><button data-act="dlvoice"'+(p.duoVoice!==false?' class="on"':"")+'>대화할 때 말소리 '+(p.duoVoice!==false?"켬":"끔")+'</button></div>';
+  h+='<div class="chips" style="margin:2px 0 8px"><button data-act="dlauto"'+(p.duoAuto!==false?' class="on"':"")+'>저절로 대화하기 '+(p.duoAuto!==false?"켬":"끔")+'</button><button data-act="dlvoice"'+(p.duoVoice!==false?' class="on"':"")+'>대화할 때 말소리 '+(p.duoVoice!==false?"켬":"끔")+'</button><button data-act="dlmeet"'+(p.meet!==false?' class="on"':"")+'>돌아다니다 마주치면 반응 '+(p.meet!==false?"켬":"끔")+'</button></div>';
   h+='<div class="btns"><button class="btn" data-act="dlgadd">＋ 대화 추가</button>'+(D.length?"":'<button class="btn" data-act="dlgdef">기본 대화 불러와서 고치기</button>')+(live?'<button class="btn" data-act="ptalk">아무 대화나 들어 보기</button>':"")+"</div>";
   h+='<p class="note">말하는 사람 칩을 누르면 다음 사람으로 바뀌어요. 모양 버튼은 말풍선 · 효과음 · 놀람 · 생각, 몸짓 버튼은 통통 · 끄덕 · 펄쩍 · 다가가기 같은 움직임이에요. 말하는 동안 다른 친구들은 말하는 쪽으로 몸을 기울여요. 대사 안의 {A} {B}는 첫째 · 둘째 사람 이름으로 바뀌어요.</p>';
   return h;
@@ -801,6 +802,7 @@ function zk(el,attr){ return el.getAttribute(attr).split("|"); }
 function toggleTile(id){
   var t=cur(), c=S.settings||{};
   if(id.indexOf("o-")===0&&t){ t.desk=Object.assign({size:160},t.desk||{}); t.motion=t.motion||{};
+    if(id==="o-wander") t.desk.wander=!t.desk.wander; if(id.indexOf("o-wspd-")===0) t.desk.wanderSpeed=parseFloat(id.slice(7));
     if(id==="o-shadow") t.desk.noShadow=!t.desk.noShadow; if(id==="o-flip") t.desk.flip=!t.desk.flip; if(id==="o-lock") t.desk.lock=!t.desk.lock; if(id==="o-br") t.motion.breathe=t.motion.breathe===false; if(id==="o-idlev") t.idleVoice=!t.idleVoice; if(id==="o-fx") t.fxOff=!t.fxOff; if(id==="o-pet") t.petOff=!t.petOff; if(id==="o-tilt"){ t.motion.idleTilt=!t.motion.idleTilt; if(t.motion.idleTilt){ var st0=$("#zst .stage"); if(st0) Z.idleTilt(st0); } } saveSoon(true); render(); return; }
   if(id==="k-clicker"||id==="k-img"){ t.kind=id==="k-img"?"img":"clicker"; saveSoon(true); render(); return; }
   if(id==="s-pin") setCfg("pinned",c.pinned===false);
@@ -885,6 +887,7 @@ app.addEventListener("click",function(e){
   if(a==="zshow"){ SHOWZ=!SHOWZ; b.classList.toggle("on",SHOWZ); var zs=$("#zst"); if(zs) zs.classList.toggle("show",SHOWZ); }
   if(a==="del") ask("'"+(t.nick||t.name||"이 캐릭터")+"'를 지울까요? 되돌릴 수 없어요.","지우기").then(function(ok){ if(!ok) return; var id=SEL; S.tokens=S.tokens.filter(function(z){return z.id!==id}); S.pairs.forEach(function(p){p.tokenIds=p.tokenIds.filter(function(z){return z!==id})}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="token"&&z.who.id===id); }); (S.events||[]).forEach(function(z){ if(z.who&&z.who.type==="token"&&z.who.id===id) z.who=null; if(z.star===id) z.star=null; }); if(S.settings.main===id){ S.settings.main=null; setCfg("main",null); } SEL=null; SUB="basic"; saveSoon(true); render(); toast("지웠어요"); });
   if(a==="pduo"){ var pd=pairOf(b); setCfg("duo",S.settings.duo===pd.id?"":pd.id); saveSoon(true); render(); toast(S.settings.duo?"바탕화면에 둘이 같이 나와요":"한 명만 나와요"); return; }
+  if(a==="dlmeet"){ var pm=pairOf(b); pm.meet=pm.meet===false; saveSoon(true); render(); toast(pm.meet?"돌아다니다 가까워지면 서로 반응해요":"마주쳐도 반응하지 않아요"); return; }
   if(a==="dlauto"||a==="dlvoice"){ var pz=pairOf(b), kz=a==="dlauto"?"duoAuto":"duoVoice"; pz[kz]=pz[kz]===false; saveSoon(true); render(); toast(a==="dlauto"?(pz.duoAuto?"가끔 저절로 대화해요":"저절로 대화하지 않아요 · 우클릭 [둘이 이야기하기]로는 할 수 있어요"):(pz.duoVoice?"대화할 때 말소리가 나요":"대화는 소리 없이 말풍선만 떠요")); return; }
   if(a==="feedback"){ openFeedback(); return; }
   if(a==="pfold"){ var pf=pairOf(b); pf.fold=!pf.fold; saveSoon(true); render(); return; }

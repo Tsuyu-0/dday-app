@@ -84,6 +84,13 @@
     petDragStart: function () { setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; }); },
     petDrag: function (dx, dy) { if (dragFrom) win.setPosition(new LPos(Math.round(dragFrom.x + dx), Math.round(dragFrom.y + dy))).catch(function () {}); },
     petDragEnd: function () { dragFrom = null; refreshPos(); send("pet:dragend"); },
+    /* 돌아다니기: 창 위치 · 화면 작업 영역(작업 표시줄 뺀 곳)을 실제 픽셀로 */
+    walkInfo: function () { return Promise.all([win.outerPosition(), win.outerSize(), win.scaleFactor(), T.window.currentMonitor()]).then(function (r) {
+      var m = r[3] || {}, wa = m.workArea || { position: m.position || { x: 0, y: 0 }, size: m.size || { width: 1920, height: 1080 } };
+      return { x: r[0].x, y: r[0].y, w: r[1].width, h: r[1].height, sf: r[2] || 1, ax: wa.position.x, aw: wa.size.width }; }); },
+    walkSetX: function (x, y) { var PP = DPI.PhysicalPosition; pos = { x: Math.round(x), y: y }; posT = Date.now(); return win.setPosition(new PP(Math.round(x), y)).catch(function () {}); },
+    walkDone: function () { refreshPos(); send("pet:walked"); },
+    walkFriends: function () { return call("pet:friends"); },
     petMenu: function () { send("pet:menu"); },
   };
 })();

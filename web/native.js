@@ -85,7 +85,8 @@
     soon.slice(0, 3).forEach(function (x, i) { var l = AN.soonLine(S, x.a, x.n); if (!greet && i === 0) greet = l; out.push(l); out.push(l); });
     var st = S.settings || {};
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
-      voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6 };
+      voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6,
+      wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1 };
   }
 
   /* 위젯에 들어갈 캐릭터 그림: 파츠를 순서대로 겹쳐 한 장으로 */

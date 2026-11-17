@@ -157,7 +157,7 @@ window.addEventListener("contextmenu",function(e){ e.preventDefault(); if(over) 
 api.onPetToken(render);
 /* 같이 떠 있는 친구들과 상호작용: 몸짓 · 바라보기 */
 if(api.onPetAct) api.onPetAct(function(d){
-  if(!T||!d) return; var size=stage.offsetWidth;
+  if(!T||!d) return; var size=stage.offsetWidth; W.quiet(d.hold||1800); if(d.face) W.face(d.face,d.hold||1800);
   if(d.lean!=null){ stage.style.transformOrigin="50% 100%"; stage.style.transition="rotate .45s ease"; stage.style.rotate=(d.lean*5)+"deg"; clearTimeout(stage._faceT); if(d.lean) stage._faceT=setTimeout(function(){ stage.style.rotate="0deg"; },d.hold||5000); }
   if(d.motion) Z.move(stage,d.motion);
   if(d.fx) Z.spawn(stage,size*(d.side>0?.75:d.side<0?.25:.5),size*.28,d.fx,size);
@@ -165,7 +165,49 @@ if(api.onPetAct) api.onPetAct(function(d){
 api.onPetPoke(function(){ var zs=Z.zonesFor(T||{}); react(zs[Math.floor(Math.random()*zs.length)]); });
 api.onPetSay(function(t){ if(!T) return; Z.react(stage,T,"head"); var c=T._cfg||{}; if(!c.mute) Z.sound("bell",c.volume); if(t&&typeof t==="object") helpSay(t.line,t.view); else helpSay(t,"events"); });
 /* 페어로 같이 떠 있을 때: 옆 캐릭터와 주고받는 대사 */
-if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); if(d.motion) Z.move(stage,d.motion); else Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); if(d.ap&&api.nudge) api.nudge(d.ap); if(d.g!=null&&api.petLineDone) setTimeout(function(){ api.petLineDone(d.g,d.k); },(d.ms||1700)+350); });
+if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; W.quiet((d.ms||2000)+2500); clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); if(d.motion) Z.move(stage,d.motion); else Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); if(d.ap&&api.nudge) api.nudge(d.ap); if(d.g!=null&&api.petLineDone) setTimeout(function(){ api.petLineDone(d.g,d.k); },(d.ms||1700)+350); });
 api.petToken().then(render);
 idleLoop();
+/* ---------- 돌아다니기 (시메지처럼 바탕화면 아래를 통통 튀며 걸어요) ---------- */
+var W=(function(){
+  var walking=false, abort=false, quietUntil=0, hover=false, faceT=0;
+  stage.addEventListener("pointerenter",function(){ hover=true; abort=true; });
+  stage.addEventListener("pointerleave",function(){ hover=false; });
+  function on(){ return !!(T&&T.desk&&T.desk.wander&&api.walkInfo&&!(T._cfg&&T._cfg.allHidden)); }
+  /* 걷는 쪽을 보게: 안쪽 그림만 좌우로 (원래 [좌우 뒤집기] 설정과 겹치면 서로 상쇄) */
+  function look(dir){ var inner=document.getElementById("inner"); if(!inner) return; var base=!!(T&&T.desk&&T.desk.flip), m=dir===0?base:(base!==(dir>0)); inner.style.transform=m?"scaleX(-1)":"none"; }
+  function face(dir,ms){ clearTimeout(faceT); look(dir); faceT=setTimeout(function(){ if(!walking) look(0); },ms||1500); }
+  function busy(){ return dragging||hover||Date.now()<quietUntil||document.querySelector("body > .bub"); }
+  function tick(){
+    setTimeout(tick,5000+Math.random()*9000);
+    if(!on()||walking||busy()||Math.random()<.3) return;
+    api.walkInfo().then(function(I){
+      var sf=I.sf, min=I.ax, max=I.ax+I.aw-I.w, cur=I.x;
+      var go=function(target){ target=Math.max(min,Math.min(max,target)); if(Math.abs(target-cur)<40*sf) return; walk(I,target); };
+      if(Math.random()<.35&&api.walkFriends) return api.walkFriends().then(function(fr){
+        fr=(fr||[]).sort(function(a,b){ return Math.abs(a.cx-cur-I.w/2)-Math.abs(b.cx-cur-I.w/2); });
+        if(!fr.length) return go(cur+(Math.random()<.5?-1:1)*(150+Math.random()*370)*sf);
+        var side=fr[0].cx>cur+I.w/2?-1:1; go(fr[0].cx-I.w/2+side*(I.w*.55+20*sf));
+      });
+      go(cur+(Math.random()<.5?-1:1)*(150+Math.random()*370)*sf);
+    }).catch(function(){});
+  }
+  function walk(I,target){
+    walking=true; abort=false; var dir=target>I.x?1:-1, sf=I.sf, spd=(T.desk.wanderSpeed||1);
+    var hopLen=40*sf*spd, hopMs=430/Math.sqrt(spd), dist=Math.abs(target-I.x), hops=Math.max(1,Math.round(dist/hopLen)), total=hops*hopMs, t0=performance.now(), x0=I.x;
+    clearTimeout(faceT); look(dir); stage.style.transition="none";
+    (function frame(){
+      var el=performance.now()-t0, k=Math.min(1,el/total);
+      if(abort||dragging){ end(); return; }
+      var ph=(el%hopMs)/hopMs, up=Math.sin(Math.min(1,ph)*Math.PI), sq=ph<.12?1-(.12-ph)*.6:1;
+      stage.style.translate="0 "+(-up*12)+"px"; stage.style.scale=(2-sq)+" "+sq;
+      api.walkSetX(x0+(target-x0)*k,I.y);
+      if(k>=1){ end(); return; }
+      setTimeout(frame,33);
+    })();
+    function end(){ walking=false; stage.style.translate=""; stage.style.scale=""; faceT=setTimeout(function(){ look(0); },1600); api.walkDone(); }
+  }
+  setTimeout(tick,4000);
+  return { quiet:function(ms){ quietUntil=Math.max(quietUntil,Date.now()+ms); abort=true; }, face:face };
+})();
 })();

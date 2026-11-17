@@ -304,6 +304,31 @@
 
   handlers["pet:token"] = function (from) { return petData(from || "pet"); };
   handlers["pet:dragend"] = function (from) { saveFoot(from || "pet"); };
+  /* 돌아다니기: 같은 페어 친구들이 어디 있는지 (실제 픽셀 가운데 x) · 마주치면 반응 */
+  var lastMeet = 0;
+  function pairOfLabel(label) { var d = duoPair(), lab = shown(); if (!d || !P[label] || !P[label].pick) return null; return d.ids.indexOf(P[label].pick.id) >= 0 ? { d: d, lab: lab } : null; }
+  handlers["pet:friends"] = function (from) {
+    var q = pairOfLabel(from); if (!q) return [];
+    var ls = Object.keys(q.lab).map(function (id) { return q.lab[id]; }).filter(function (l) { return l !== from && P[l].win; });
+    return Promise.all(ls.map(function (l) { return Promise.all([P[l].win.outerPosition(), P[l].win.outerSize()]).then(function (r) { return { label: l, cx: r[0].x + r[1].width / 2 }; }).catch(function () { return null; }); })).then(function (a) { return a.filter(Boolean); });
+  };
+  handlers["pet:walked"] = function (from) {
+    saveFoot(from || "pet");
+    var q = pairOfLabel(from); if (!q || q.d.p.meet === false || talking || Date.now() - lastMeet < 45000) return;
+    var me = P[from].win;
+    Promise.all([me.outerPosition(), me.outerSize(), me.scaleFactor()]).then(function (r) {
+      var cx = r[0].x + r[1].width / 2, sf = r[2] || 1;
+      return handlers["pet:friends"](from).then(function (fr) {
+        var near = fr.filter(function (f) { return Math.abs(f.cx - cx) < 230 * sf; }).sort(function (a, b) { return Math.abs(a.cx - cx) - Math.abs(b.cx - cx); })[0];
+        if (!near) return;
+        lastMeet = Date.now();
+        var dir = near.cx > cx ? 1 : -1;
+        if (q.d.p.duoAuto !== false && Math.random() < 0.4 && playTalk()) return;
+        sendTo(from, "pet:act", { lean: dir, hold: 1600, motion: "hop", fx: "heart", side: dir, face: dir });
+        setTimeout(function () { sendTo(near.label, "pet:act", { lean: -dir, hold: 1600, motion: "hop", fx: Math.random() < .5 ? "heart" : "excl", side: -dir, face: -dir }); }, 280);
+      });
+    }).catch(function () {});
+  };
   handlers["pet:open"] = function (v) { showManager().then(function () { setTimeout(function () { sendTo("manager", "nav", v); }, 350); }); };
   handlers["pet:menu"] = function (from) {
     var label = from || "pet", o = P[label]; if (!o || !o.win || !o.pick) return; var t = tok(o.pick.id); if (!t) return;
