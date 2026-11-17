@@ -175,7 +175,7 @@ var W=(function(){
   stage.addEventListener("pointerleave",function(){ hover=false; });
   function on(){ return !!(T&&T.desk&&T.desk.wander&&api.walkInfo&&!(T._cfg&&T._cfg.allHidden)); }
   /* 걷는 쪽을 보게: 안쪽 그림만 좌우로 (원래 [좌우 뒤집기] 설정과 겹치면 서로 상쇄) */
-  function look(dir){ var inner=document.getElementById("inner"); if(!inner) return; var base=!!(T&&T.desk&&T.desk.flip), m=dir===0?base:(base!==(dir>0)); inner.style.transform=m?"scaleX(-1)":"none"; }
+  function look(dir){ /* 좌우 반전은 하지 않아요 — 옆으로 이동만 */ }
   function face(dir,ms){ clearTimeout(faceT); look(dir); faceT=setTimeout(function(){ if(!walking) look(0); },ms||1500); }
   function busy(){ return dragging||hover||Date.now()<quietUntil||document.querySelector("body > .bub"); }
   function tick(){

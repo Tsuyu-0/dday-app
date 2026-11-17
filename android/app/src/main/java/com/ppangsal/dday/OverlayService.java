@@ -73,13 +73,12 @@ public class OverlayService extends Service {
         walker.addUpdateListener(a -> {
             float k = (float) a.getAnimatedValue(), el = k * hops * hopMs, ph = (el % hopMs) / hopMs;
             float up = (float) Math.sin(Math.min(1f, ph) * Math.PI), sq = ph < .12f ? 1f - (.12f - ph) * .6f : 1f;
-            img.setTranslationY(-up * dp(12)); img.setScaleX((dir > 0 ? -1f : 1f) * (2f - sq));
+            img.setTranslationY(-up * dp(12)); img.setScaleX(2f - sq);
             lp.x = Math.round(x0 + (target - x0) * k); try { wm.updateViewLayout(root, lp); } catch (Exception ex) { }
         });
         walker.addListener(new android.animation.AnimatorListenerAdapter() {
             boolean done = false;
-            void fin() { if (done) return; done = true; walker = null; img.setTranslationY(0); img.setScaleX(dir > 0 ? -1f : 1f);
-                h.postDelayed(() -> { if (walker == null) img.setScaleX(1f); }, 1600);
+            void fin() { if (done) return; done = true; walker = null; img.setTranslationY(0); img.setScaleX(1f);
                 getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", lp.x).apply(); }
             @Override public void onAnimationEnd(android.animation.Animator a) { fin(); }
             @Override public void onAnimationCancel(android.animation.Animator a) { fin(); }
