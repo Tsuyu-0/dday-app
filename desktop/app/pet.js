@@ -12,7 +12,7 @@ function render(t){
   if(Z.isCk(t)) inner=Z.ckHTML(t);
   else if(t.img&&t.img.src) inner='<img class="one" src="'+esc(t.img.src)+'"'+(t.pixel?' style="image-rendering:pixelated"':"")+'>';
   else inner='<div class="one" style="display:flex;align-items:center;justify-content:center;border-radius:50%;background:'+esc(t.color||"#1d1e1f")+';color:#fff;font-weight:700;font-size:'+Math.round(size/3)+'px;inset:18%;width:auto;height:auto">'+esc((t.nick||t.name||"?")[0])+"</div>";
-  stage.innerHTML='<div class="shadow"></div><div id="inner" style="transform:'+flip+'">'+inner+"</div>";
+  stage.innerHTML=(t.desk&&t.desk.noShadow?'':'<div class="shadow"></div>')+'<div id="inner" style="transform:'+flip+'">'+inner+"</div>";
   MAP=null; Z.build(t).then(function(m){ MAP=m; }); Z.topFrac(t);
 }
 /* 마우스 위치 → 0~1 (뒤집기 반영) */
@@ -31,12 +31,17 @@ function pick(list,key){
 var defBub="speech";
 /* 알려 주는 풍선: 버튼 달린 노란 풍선 */
 var VIEW_LB={events:"일정 보기",anniv:"기념일 보기",home:"열어 보기"};
-function helpSay(text,view){
+/* 알겠어 · 보기를 누른 알림은 숫자가 바뀌기 전까지(하루) 다시 안 띄워요 */
+function seenKey(k){ return "dd-seen|"+k; }
+function isSeen(k){ try{ return !!(k&&localStorage.getItem(seenKey(k))); }catch(e){ return false; } }
+function markSeen(k){ if(!k) return; try{ localStorage.setItem(seenKey(k),String(Date.now()));
+  for(var i=localStorage.length-1;i>=0;i--){ var kk=localStorage.key(i); if(kk&&kk.indexOf("dd-seen|")===0&&Date.now()-(+localStorage.getItem(kk)||0)>40*864e5) localStorage.removeItem(kk); } }catch(e){} }
+function helpSay(text,view,key){
   if(!T||!text) return;
   clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()});
   var sz=stage.offsetHeight, bp=Z.bubPos(T,sz);
   var el=Z.bubble(document.body,text,"help",{bottom:8+sz-bp.fromTop+18+bp.dy,dx:bp.dx*(T.desk&&T.desk.flip?-1:1),clamp:true,maxWidth:Math.max(160,window.innerWidth-50),
-    buttons:[[VIEW_LB[view]||"열어 보기",view||"home"],["알겠어","ok"]],onAct:function(a){ if(a!=="ok") api.petOpen(a); setOver(false); }});
+    buttons:[[VIEW_LB[view]||"열어 보기",view||"home"],["알겠어","ok"]],onAct:function(a){ markSeen(key); if(a!=="ok") api.petOpen(a); setOver(false); }});
   setTimeout(function(){ if(el.parentNode) el.remove(); },12000);
 }
 function say(line,idle,style,msOver,quiet){
@@ -73,9 +78,9 @@ function idleLoop(){
       (T.idleLines||[]).forEach(function(s){ pool.push([s,true]); });
       if(cfg.anniv&&cfg.anniv.days===0) annivLines().forEach(function(s){ pool.push([s,false]); pool.push([s,false]); });
       else if(cfg.anniv) pool.push([cfg.anniv.def,true]);
-      (cfg.soon||[]).forEach(function(x){ pool.push([x.title+"까지 "+x.days+"일 남았어요.",true,"anniv"]); });
-      (cfg.today||[]).forEach(function(x){ pool.push([(x.time?"오늘 "+x.time+"에 ":"오늘 ")+x.title+" 일정이 있어요. 확인해 볼까요?",false,"events"]); });
-      if(pool.length){ var it=pool[Math.floor(Math.random()*pool.length)]; if(it[2]) helpSay(it[0],it[2]); else say(it[0],it[1]); }
+      (cfg.soon||[]).forEach(function(x){ var k="s|"+x.title+"|"+x.days+"|"+(cfg.day||""); if(!isSeen(k)) pool.push([x.title+"까지 "+x.days+"일 남았어요.",true,"anniv",k]); });
+      (cfg.today||[]).forEach(function(x){ var k="t|"+x.title+"|"+(x.time||"")+"|"+(cfg.day||""); if(!isSeen(k)) pool.push([(x.time?"오늘 "+x.time+"에 ":"오늘 ")+x.title+" 일정이 있어요. 확인해 볼까요?",false,"events",k]); });
+      if(pool.length){ var it=pool[Math.floor(Math.random()*pool.length)]; if(it[2]) helpSay(it[0],it[2],it[3]); else say(it[0],it[1]); }
     }
     idleLoop();
   },20000+Math.random()*40000);
@@ -146,7 +151,7 @@ if(api.onPetAct) api.onPetAct(function(d){
 api.onPetPoke(function(){ var zs=Z.zonesFor(T||{}); react(zs[Math.floor(Math.random()*zs.length)]); });
 api.onPetSay(function(t){ if(!T) return; Z.react(stage,T,"head"); var c=T._cfg||{}; if(!c.mute) Z.sound("bell",c.volume); if(t&&typeof t==="object") helpSay(t.line,t.view); else helpSay(t,"events"); });
 /* 페어로 같이 떠 있을 때: 옆 캐릭터와 주고받는 대사 */
-if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); if(d.motion) Z.move(stage,d.motion); else Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); });
+if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); if(d.motion) Z.move(stage,d.motion); else Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); if(d.ap&&api.nudge) api.nudge(d.ap); if(d.g!=null&&api.petLineDone) setTimeout(function(){ api.petLineDone(d.g,d.k); },(d.ms||1700)+350); });
 api.petToken().then(render);
 idleLoop();
 })();

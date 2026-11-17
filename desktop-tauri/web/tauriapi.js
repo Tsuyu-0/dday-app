@@ -76,6 +76,10 @@
     onPetAct: on("pet:act"),
     petPetted: function () { send("pet:petted"); },
     petTapped: function () { send("pet:tap"); },
+    petLineDone: function (g, k) { send("pet:lineDone", g, k); },
+    /* 옆 친구 쪽으로 살짝 다가갔다 돌아오기 */
+    nudge: function (dir) { Promise.all([win.outerPosition(), win.scaleFactor()]).then(function (r) { var x0 = r[0].x, y0 = r[0].y, dist = 26 * (r[1] || 1) * (dir >= 0 ? 1 : -1), t0 = Date.now(), PP = DPI.PhysicalPosition;
+      (function f() { var t = (Date.now() - t0) / 700; if (t >= 1) { win.setPosition(new PP(x0, y0)).catch(function () {}); return; } win.setPosition(new PP(Math.round(x0 + dist * Math.sin(t * Math.PI)), y0)).catch(function () {}); setTimeout(f, 30); })(); }).catch(function () {}); },
     petIgnore: function (v) { if (!dragFrom) setIgnore(v); },
     petDragStart: function () { setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; }); },
     petDrag: function (dx, dy) { if (dragFrom) win.setPosition(new LPos(Math.round(dragFrom.x + dx), Math.round(dragFrom.y + dy))).catch(function () {}); },

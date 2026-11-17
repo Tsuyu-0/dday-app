@@ -93,6 +93,7 @@ function basicSub(t){
     tile("o-lock",d.lock,"위치 잠금","눌러도 끌려가지 않아요")+
     tile("o-br",m.breathe!==false,"숨쉬기 모션","가만히 있어도 살짝살짝 움직여요")+
     tile("o-tilt",!!m.idleTilt,"가끔 고개 까딱","가만히 있다가 고개를 좌우로 까딱까딱해요")+
+    tile("o-shadow",!d.noShadow,"발밑 그림자","캐릭터 밑에 동그란 그림자를 깔아요")+
     "</div></div>"+bubBox(t)+
     '<div class="box"><div class="box-t">내보내기<small>그림 · 성격 · 말소리 · 대사까지 파일 하나로</small></div><p class="note" style="margin-bottom:10px">다른 컴퓨터나 폰(웹앱)으로 옮기거나 친구에게 줄 때 써요. 받은 쪽은 [설정 → 캐릭터 불러오기]로 넣어요. 기념일은 생일만 함께 가요.</p><div class="btns"><button class="btn" data-act="charexp">캐릭터 파일 만들기</button></div></div>'+
     '<div class="btns" style="justify-content:flex-end"><button class="btn ghost danger" data-act="del">이 캐릭터 지우기</button></div>';
@@ -198,7 +199,8 @@ function talkSub(t){
   var tabs='<div class="lgtabs">'+groups.map(function(g){ var n=getLines(t,g[0]).length; return '<button data-lgsel="'+g[0]+'"'+(g[0]===LGSEL?' class="on"':"")+">"+(g[2]?'<i style="background:'+g[2]+'"></i>':"")+esc(g[1].replace(" 눌렀을 때","").replace(/[을를]$/,""))+(n?"<em>"+n+"</em>":"")+"</button>"; }).join("")+"</div>";
   var rows=arr.map(function(s2,i){ var p=Z.parseLine(s2,def); return '<div class="ln"><button class="bstyle'+(p.auto?"":" set")+'" data-lnb="'+LGSEL+'|'+i+'" title="말풍선 모양: '+BUB_NAME[p.style]+(p.auto?" (기본)":"")+'"><svg viewBox="0 0 20 16">'+(BUBICON[p.style]||BUBICON.speech)+'</svg></button><input class="in" data-ln="'+LGSEL+'|'+i+'" value="'+esc(p.text)+'" placeholder="대사를 적어 주세요"><button class="ib" data-lndel="'+LGSEL+'|'+i+'" title="지우기">'+X+"</button></div>"; }).join("");
   return '<div class="box"><div class="box-t">성격<small>고르면 누를 때의 몸짓 · 효과 · 말풍선이 한 번에 정해져요</small></div>'+pcards+'</div>'+
-    '<div class="box"><div class="box-t">말소리<small>말할 때 글자마다 웅얼웅얼 · 같은 대사는 늘 같은 말투로</small></div><div class="chips">'+Z.VOICES.map(function(v){ return '<button data-babble="'+v[0]+'"'+((t.babble||"none")===v[0]?' class="on"':"")+">"+v[1]+"</button>"; }).join("")+'</div>'+
+    '<div class="box"><div class="box-t">말소리<small>말할 때 글자마다 웅얼웅얼 · 같은 대사는 늘 같은 말투로</small></div>'+(function(){ var mi=Z.VOICES.map(function(v){return v[0]}).indexOf("mono"), ch=function(a){ return '<div class="chips">'+a.map(function(v){ return '<button data-babble="'+v[0]+'"'+((t.babble||"none")===v[0]?' class="on"':"")+">"+v[1]+"</button>"; }).join("")+"</div>"; };
+      return mi<0?ch(Z.VOICES):'<div class="lbl" style="margin-top:0">목소리</div>'+ch(Z.VOICES.slice(0,mi))+'<div class="lbl">기계음 <span class="note" style="font-weight:400">글자마다 삑삑 · 또각또각</span></div>'+ch(Z.VOICES.slice(mi)); })()+
       ((t.babble&&t.babble!=="none")?'<div class="lbl">톤 높낮이</div><div class="slide"><input type="range" id="bb-p" min="-12" max="12" value="'+(t.babblePitch||0)+'"><span class="val" id="bb-p-v">'+ptLbl(t.babblePitch||0)+'</span></div>'+
       '<div class="lbl">말 빠르기</div><div class="slide"><input type="range" id="bb-s" min="60" max="170" step="5" value="'+Math.round((t.babbleSpeed||1)*100)+'"><span class="val" id="bb-s-v">'+spLbl(t.babbleSpeed||1)+'</span></div>'+
       '<div class="tiles" style="margin-top:12px;grid-template-columns:1fr">'+tile("o-idlev",!!t.idleVoice,"가만히 있을 때도 말소리 내기","꺼 두면 혼잣말은 글자만 조용히 떠요. 누르거나 알림이 올 때만 소리가 나요")+'</div>':"")+'</div>'+
@@ -701,7 +703,7 @@ function zk(el,attr){ return el.getAttribute(attr).split("|"); }
 function toggleTile(id){
   var t=cur(), c=S.settings||{};
   if(id.indexOf("o-")===0&&t){ t.desk=Object.assign({size:160},t.desk||{}); t.motion=t.motion||{};
-    if(id==="o-flip") t.desk.flip=!t.desk.flip; if(id==="o-lock") t.desk.lock=!t.desk.lock; if(id==="o-br") t.motion.breathe=t.motion.breathe===false; if(id==="o-idlev") t.idleVoice=!t.idleVoice; if(id==="o-fx") t.fxOff=!t.fxOff; if(id==="o-pet") t.petOff=!t.petOff; if(id==="o-tilt"){ t.motion.idleTilt=!t.motion.idleTilt; if(t.motion.idleTilt){ var st0=$("#zst .stage"); if(st0) Z.idleTilt(st0); } } saveSoon(true); render(); return; }
+    if(id==="o-shadow") t.desk.noShadow=!t.desk.noShadow; if(id==="o-flip") t.desk.flip=!t.desk.flip; if(id==="o-lock") t.desk.lock=!t.desk.lock; if(id==="o-br") t.motion.breathe=t.motion.breathe===false; if(id==="o-idlev") t.idleVoice=!t.idleVoice; if(id==="o-fx") t.fxOff=!t.fxOff; if(id==="o-pet") t.petOff=!t.petOff; if(id==="o-tilt"){ t.motion.idleTilt=!t.motion.idleTilt; if(t.motion.idleTilt){ var st0=$("#zst .stage"); if(st0) Z.idleTilt(st0); } } saveSoon(true); render(); return; }
   if(id==="k-clicker"||id==="k-img"){ t.kind=id==="k-img"?"img":"clicker"; saveSoon(true); render(); return; }
   if(id==="s-pin") setCfg("pinned",c.pinned===false);
   if(id==="s-through") setCfg("clickThrough",c.clickThrough===false);

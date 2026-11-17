@@ -105,7 +105,7 @@
   function setBounds(w, b) { return Promise.all([w.setSize(new LSize(b.width, b.height)), w.setPosition(new LPos(b.x, b.y))]); }
 
   /* ---------- 바탕화면 캐릭터 (한 명, 페어를 같이 띄우면 두 명) ---------- */
-  var PAD_X = 84, PAD_TOP = 112, lastDay = "";
+  var PAD_X = 100, PAD_TOP = 190, lastDay = "";
   var LABELS = ["pet", "pet2", "pet3", "pet4", "pet5"], FOOT = { pet: "foot", pet2: "foot2", pet3: "foot3", pet4: "foot4", pet5: "foot5" };
   var P = {}; LABELS.forEach(function (l) { P[l] = { win: null, pick: null, size: null, opening: false }; });
   var pet = null; // 첫 번째 창 (알림 말풍선용)
@@ -233,7 +233,8 @@
     list.base = base;
     return list;
   }
-  var talking = false, lastTalk = -1, talkGen = 0;
+  var talking = false, lastTalk = -1, talkGen = 0, waitLine = {};
+  handlers["pet:lineDone"] = function (g, k) { var f = waitLine[g + "|" + k]; if (f) f(); };
   /* 지금 떠 있는 친구들: 캐릭터 id → 창 이름 */
   function shown() { var m = {}; LABELS.forEach(function (l) { if (P[l].win && P[l].pick) m[P[l].pick.id] = l; }); return m; }
   function posAll() {
@@ -272,9 +273,11 @@
         Object.keys(px).forEach(function (l) { if (l !== label) sendTo(l, "pet:act", { lean: px[label] > px[l] ? 1 : -1, hold: ms + 600 }); });
         var others = Object.keys(px).filter(function (l) { return l !== label; }), near = others.sort(function (p1, p2) { return Math.abs(px[p1] - px[label]) - Math.abs(px[p2] - px[label]); })[0];
         var mo = ln.m === "approach" ? "hop" : ln.m;
-        if (ln.m === "approach" && near) approach(label, px[near] - px[label]);
-        sendTo(label, "pet:line", { text: ln.t, ms: ms, quiet: d.p.duoVoice === false, motion: mo });
-        setTimeout(function () { step(k + 1); }, ms + 350);
+        // 다음 줄은 말한 친구 창이 "다 말했어"라고 알려 줄 때 넘어가요 (숨은 창 타이머는 윈도우에서 느려질 수 있어서)
+        var moved = false, go = function () { if (moved) return; moved = true; delete waitLine[gen + "|" + k]; step(k + 1); };
+        waitLine[gen + "|" + k] = go;
+        sendTo(label, "pet:line", { text: ln.t, ms: ms, quiet: d.p.duoVoice === false, motion: mo, g: gen, k: k, ap: ln.m === "approach" && near ? (px[near] - px[label] >= 0 ? 1 : -1) : 0 });
+        setTimeout(go, ms + 4000);
       };
       step(0);
     });

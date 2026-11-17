@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>기념일 D-day · OC Atelier</title>
+<meta name="description" content="자캐 · 페어의 기념일을, 그 아이가 직접 알려 주는 D-day. 웹앱 · 안드로이드 · PC.">
+<meta property="og:title" content="기념일 D-day · OC Atelier"><meta property="og:description" content="페어의 기념일을, 그 아이가 직접 알려 줘요">
+<meta property="og:image" content="../img/thumb-dday.webp">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+@font-face{font-family:"SUIT";src:url("../assets/SUIT-Variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Cormorant Garamond";src:url("../assets/cormorant-garamond-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Cormorant Garamond";src:url("../assets/cormorant-garamond-latin-500-italic.woff2") format("woff2");font-weight:500;font-style:italic;font-display:swap}
+:root{--ink:#1d1e1f;--sub:#76777b;--faint:#a9aaae;--line:#e7e7ea;--panel:#f5f5f6;--accent:#3f5bff;--serif:"Cormorant Garamond","Times New Roman",serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-padding-top:70px;scroll-behavior:smooth}
+body{font-family:"SUIT",-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);background:#fff;line-height:1.6;word-break:keep-all;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:900px;margin:0 auto;padding:0 22px}
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:14px;height:58px}
+.logo{font-family:var(--serif);font-weight:600;font-size:21px;letter-spacing:.04em;white-space:nowrap}
+.logo small{font-family:"SUIT",sans-serif;font-size:12px;font-weight:700;color:var(--faint);letter-spacing:0;margin-left:8px}
+.nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav a{font-size:13.5px;font-weight:600;color:var(--sub);padding:7px 10px;border-radius:999px;white-space:nowrap}
+.nav a:hover{color:var(--ink);background:var(--panel)}
+.hero{text-align:center;padding:66px 0 30px}
+.eyebrow{font-family:var(--serif);font-style:italic;font-size:17px;color:var(--sub)}
+.hero h1{font-weight:800;font-size:clamp(28px,5.4vw,42px);letter-spacing:-.02em;line-height:1.3;margin:10px 0 14px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.lead{font-size:15px;color:#4a4b4f;max-width:470px;margin:0 auto}
+.get{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:26px}
+.get a{display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:14px;font-weight:700;transition:background .15s,border-color .15s,transform .15s}
+.get a small{font-size:11.5px;font-weight:600;color:var(--faint)}
+.get a:hover{background:#f4f4f6;border-color:#d8d8dd;transform:translateY(-1px)}
+.get a.main{background:var(--ink);color:#fff;border-color:var(--ink)}.get a.main small{color:#b9babe}
+.badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px}
+.badges span{font-size:12px;font-weight:600;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:5px 13px}
+.shot{max-width:620px;margin:40px auto 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.shot img{width:100%;border-radius:18px;border:1px solid var(--line);display:block;background:var(--panel)}
+section{margin:62px 0}
+.sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:18px}
+.sec-h h2{font-size:21px;font-weight:800}
+.sec-h small{font-size:13px;color:var(--faint)}
+.sec-h .en{font-family:var(--serif);font-style:italic;font-size:16px;color:var(--faint);font-weight:500}
+.feat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.f{border:1px solid var(--line);border-radius:22px;padding:18px 18px 16px;background:#fff;transition:transform .2s,box-shadow .2s}
+.f:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(20,20,40,.06)}
+.f svg{width:30px;height:30px;display:block;margin-bottom:12px}
+.f b{display:block;font-size:15px;font-weight:800;margin-bottom:4px}
+.f p{font-size:13px;color:#55565a}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;counter-reset:s}
+.st{border:1px solid var(--line);border-radius:22px;padding:18px;counter-increment:s}
+.st::before{content:counter(s,decimal-leading-zero);font-family:var(--serif);font-size:26px;font-weight:600;color:var(--faint);display:block;line-height:1;margin-bottom:10px}
+.st b{display:block;font-size:15px;font-weight:800;margin-bottom:4px}
+.st p{font-size:13px;color:#55565a}
+.news{border:1px solid var(--line);border-radius:22px;padding:20px 22px}
+.nw-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.nw-tag{flex:none;font-size:11px;font-weight:700;background:var(--ink);color:#fff;border-radius:999px;padding:3px 9px}
+.nw-h time{font-size:12px;color:var(--faint)}
+.news>b,.nw>b{display:block;font-size:16px;font-weight:800;margin-bottom:8px}
+ul.l{padding-left:18px;font-size:13.5px;color:#4a4b4f}
+ul.l li{margin:4px 0}ul.l b{color:var(--ink)}
+.list{border-top:1px solid var(--line)}
+.list details{border-bottom:1px solid var(--line)}
+.list summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:15px 4px;font-size:14.5px;font-weight:700}
+.list summary::-webkit-details-marker{display:none}
+.list summary::after{content:"+";margin-left:auto;color:var(--faint);font-weight:400;font-size:18px}
+.list details[open] summary::after{content:"−"}
+.faq summary::before{content:"Q";font-family:var(--serif);font-size:18px;color:var(--faint);flex:none}
+.how summary::before{content:"·";color:var(--faint);font-size:20px;flex:none;width:10px}
+.list .a{padding:0 6px 18px 28px;font-size:13.5px;color:#4a4b4f}
+.list .a p+p,.list .a p+ul{margin-top:8px}
+.a table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.a th,.a td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:center}.a th{background:var(--panel)}
+.a td:first-child,.a th:first-child{text-align:left;font-weight:600}
+.a .y{color:var(--accent);font-weight:800}.a .x{color:#c9cace}
+.a figure{margin:12px 0 0}.a figure img{width:100%;border-radius:14px;border:1px solid var(--line)}.a figcaption{font-size:12px;color:var(--faint);text-align:center;margin-top:4px}
+.a .syn{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:8px}
+.a code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--panel);border-radius:6px;padding:1px 6px;justify-self:start}
+.a .parts{display:flex;gap:14px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:12px}
+.a .parts img{width:70px}
+.a .btn,.a a.btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700}
+.a .note{border-left:3px solid #e9b949;background:#fff8e6;border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px}
+.a a{text-decoration:underline;text-underline-offset:2px}
+footer{border-top:1px solid var(--line);padding:30px 0 50px;font-size:12.5px;color:var(--faint);text-align:center}
+footer a{color:var(--sub)}
+@media (max-width:720px){.feat,.steps{grid-template-columns:1fr 1fr}.shot{grid-template-columns:1fr 1fr}.shot img:nth-child(3){display:none}}
+@media (max-width:460px){.feat{gap:10px}.f{padding:14px;border-radius:18px}.f b{font-size:14px}.f p{font-size:12px}.steps{grid-template-columns:1fr}.hero{padding-top:44px}}
+</style></head><body>
+<header class="top"><div class="wrap"><a class="logo" href="../">OC Atelier<small>기념일 D-day</small></a>
+<nav class="nav"><a href="#get">받기</a><a href="#what">기능</a><a href="#news">소식</a><a href="#how">사용법</a><a href="#faq">질문</a></nav></div></header>
+<main class="wrap">
+<div class="hero">
+  <div class="eyebrow">Anniversary D-day</div>
+  <h1>페어의 기념일을,<br><em>그 아이가 직접</em> 알려 줘요</h1>
+  <p class="lead">생일, 처음 만난 날, 사귄 지 100일… 캐릭터별로 기념일을 모아 두면, 그날 그 캐릭터가 먼저 축하해 줘요.</p>
+  <div class="get" id="get">
+    <a class="main" href="./">웹앱 열기 <small>설치 없이</small></a>
+    <a href="https://github.com/Tsuyu-0/dday-app/releases/latest/download/dday-app.apk">안드로이드 <small>APK · 6MB</small></a>
+    <a href="https://github.com/Tsuyu-0/dday-app/releases/latest/download/AnniversaryDday-Setup.exe">PC 윈도우 <small>2MB</small></a>
+  </div>
+  <div class="badges"><span>가입 없이</span><span>기기 안에만 저장</span><span>아이폰은 홈 화면에 추가</span></div>
+  <div class="shot"><img src="guide/m-anniv.webp" alt="기념일 카드" loading="lazy"><img src="guide/m-home.webp" alt="홈" loading="lazy"><img src="guide/m-cal.webp" alt="다이어리 달력" loading="lazy"></div>
+</div>
+
+<section id="what"><div class="sec-h"><h2>이런 걸 해요</h2><span class="en">features</span></div>
+  <div class="feat"><div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21S3 15.4 3 9.2A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 9 2.2C21 15.4 12 21 12 21z" fill="#FF8FB4"/></svg><b>캐릭터가 알려 주는 기념일</b><p>매년 · 100일마다 · 한 번만. 그날이 되면 그 캐릭터가 나와서 먼저 축하해요.</p></div><div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.6" y="5" width="16.8" height="15.4" rx="3.2" fill="#FFE1E6"/><path d="M3.6 8.2A3.2 3.2 0 0 1 6.8 5h10.4a3.2 3.2 0 0 1 3.2 3.2V10H3.6z" fill="#FF6F86"/><rect x="7.2" y="3.2" width="1.8" height="3.6" rx=".9" fill="#E0566E"/><rect x="15" y="3.2" width="1.8" height="3.6" rx=".9" fill="#E0566E"/><path d="M8.6 14.6l2.2 2.2 4.6-4.6" fill="none" stroke="#FF6F86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><b>일정 · 다이어리 달력</b><p>TRPG · 마감 · 약속을 적고, 달마다 배경과 스티커로 꾸며요.</p></div><div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z" fill="#FFC93C"/></svg><b>홈 화면 위젯 10종</b><p>사진 카드, 이번 달 달력, 도장 카드, 함께한 지 N일째…</p></div><div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2.6l1.9 5.6 5.5 1.8-5.5 1.9L11 17.5l-1.9-5.6L3.6 10l5.5-1.8z" fill="#FFC93C"/><path d="M18 14.2l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z" fill="#FF9EC0"/></svg><b>바탕화면 · 폰 화면 캐릭터</b><p>PC 바탕화면이나 폰 화면 위에 캐릭터가 떠 있어요.</p></div><div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19.5S2.5 15.4 2.5 10.6A3.4 3.4 0 0 1 9 9a3.4 3.4 0 0 1 6.5 1.6C15.5 15.4 9 19.5 9 19.5z" fill="#FF8FB4"/><path d="M16.8 14.8s-5-3.1-5-6.6a2.6 2.6 0 0 1 5-1.2 2.6 2.6 0 0 1 5 1.2c0 3.5-5 6.6-5 6.6z" fill="#FFC2D6"/></svg><b>페어 최대 5명</b><p>같이 띄우면 적어 둔 대화를 주고받고 서로 반응해요.</p></div><div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#F7B38C"><ellipse cx="12" cy="16" rx="4.8" ry="4"/><ellipse cx="5.9" cy="10.6" rx="2" ry="2.5"/><ellipse cx="9.7" cy="6.7" rx="2" ry="2.6"/><ellipse cx="14.3" cy="6.7" rx="2" ry="2.6"/><ellipse cx="18.1" cy="10.6" rx="2" ry="2.5"/></g></svg><b>쓰다듬기 · 몸짓 · 말소리</b><p>문지르면 하트가 뿅뿅. 몸짓 13가지와 웅얼웅얼 말소리.</p></div></div>
+</section>
+
+<section id="start"><div class="sec-h"><h2>시작하기</h2><small>세 단계면 돼요</small></div>
+  <div class="steps">
+    <div class="st"><b>받거나 웹앱 열기</b><p>처음엔 예시 캐릭터 '민둥이'와 예시 기념일이 들어 있어요.</p></div>
+    <div class="st"><b>캐릭터 · 기념일 넣기</b><p>이름 · 생일만 넣어도 돼요. 그림(투명 PNG)은 나중에 넣어도 괜찮아요.</p></div>
+    <div class="st"><b>위젯 · 바탕화면에 띄우기</b><p>안드로이드는 홈 화면을 길게 눌러 위젯 추가. PC는 켜 두면 바탕화면에 나와요.</p></div>
+  </div>
+</section>
+
+<section id="news"><div class="sec-h"><h2>업데이트 소식</h2><small>앱은 새 버전이 나오면 알려 줘요</small></div>
+  <article class="news"><div class="nw-h"><span class="nw-tag">업데이트</span><time>2026.11.17</time></div><b>기계음 말소리 · 그림자 끄기 · 대화 끊김 수정</b>
+    <ul class="l">
+      <li><b>기계음 말소리 7종</b> — 단조 삑 · 로봇 · 삐빅 · 8비트 · 무전기 · 낮은 기계음 · 타자기.</li>
+      <li><b>발밑 그림자</b>를 캐릭터마다 켜고 끌 수 있어요.</li>
+      <li>윈도우에서 같이 나누는 대화가 3마디쯤에서 끊기던 문제를 고쳤어요.</li>
+      <li>"며칠 남았어요" 알림 풍선은 [알겠어]를 누르면 그날은 다시 안 떠요.</li>
+    </ul>
+  </article>
+  <article class="news"><div class="nw-h"><span class="nw-tag">업데이트</span><time>2026.11.17</time></div><b>사진 카드 위젯 · 관계 아이콘 · 쓰다듬기 · 페어 5명</b>
+    <ul class="l">
+      <li><b>사진 카드 위젯</b>(1장 · 4장) — 기념일 사진 위에 아이콘 · 날짜 · 큰 숫자. 사진이 없으면 예시 그림이 들어가요.</li>
+      <li><b>관계 아이콘 19종</b> — 하트 · 반지 · 클로버 · 검 · 왕관… 기념일마다 골라요.</li>
+      <li><b>쓰다듬기</b> — 캐릭터를 마우스로 문지르면 하트가 뿅뿅 올라와요.</li>
+      <li><b>몸짓 6종 · 효과 5종 추가</b>, 효과는 끌 수도 있어요.</li>
+      <li><b>페어 최대 5명 같이 띄우기</b>와 서로 반응하는 상호작용, 대사마다 몸짓.</li>
+      <li><b>폰 화면 위 캐릭터</b>(안드로이드) — 다른 앱 위에도 떠 있어요.</li>
+      <li>PC 버전이 2MB로 가벼워졌어요. 위젯 · 알림이 안 되던 문제도 고쳤어요.</li>
+    </ul>
+  </article>
+</section>
+
+<section id="how"><div class="sec-h"><h2>사용법</h2><small>궁금한 것만 펼쳐 보세요</small></div>
+  <div class="list how"><details><summary>기념일</summary><div class="a">  <ul class="l">
+    <li><b>반복</b> — 매년 / 100일마다 / 한 번만. 100일마다와 한 번만은 연도가 꼭 있어야 해요.</li>
+    <li><b>큰 숫자</b> — 카드에 'N일째'(그날부터 계속 세기)나 'D-day'(다음 기념일까지) 중 하나를 크게 보여 줘요.</li>
+    <li><b>캐릭터 · 페어 기념일</b> — 페어 기념일은 그날 바탕화면에 나올 캐릭터를 고를 수 있어요.</li>
+    <li><b>그날 캐릭터 교체</b> — 그 캐릭터의 기념일이 되면 바탕화면 · 위젯 캐릭터가 저절로 그 아이로 바뀌어요. ([설정]에서 끌 수 있어요)</li>
+    <li><b>카드 이미지 · 아이콘 · 강조</b> — 기념일 카드에 이미지를 넣고, 하트 · 반지 · 클로버 · 검처럼 관계에 맞는 아이콘을 골라요. ★로 강조하면 위젯에도 먼저 나와요.</li>
+    <li><b>그날 대사</b> — 기념일 당일에 할 대사를 따로 적어 둘 수 있어요. 비워 두면 알아서 축하해요.</li>
+  </ul>
+</div></details><details><summary>일정 · 공유</summary><div class="a">  <ul class="l">
+    <li><b>종류</b> — TRPG · 마감 · 약속 · 덕질 · 기타. 달력에 색으로 구분돼요.</li>
+    <li><b>알림</b> — 당일 아침 9시 / 1시간 전 / 하루 전. (안드로이드 · PC)</li>
+    <li><b>일정 보내기 · 받기</b> — 일정을 골라 코드(<code>DDAY1.…</code>)로 복사해서 메신저로 보내면, 받은 사람이 [일정 → 공유받기]에 붙여 넣어 똑같이 넣어요. 고쳐서 다시 보내면 받은 쪽도 새 내용으로 바뀌어요. 이미지까지 보내려면 파일로 저장해서 보내요.</li>
+  </ul>
+</div></details><details><summary>다이어리 달력</summary><div class="a">  <ul class="l">
+    <li>달마다 <b>배경 이미지</b>를 깔고, <b>스티커</b>(이미지 · 글씨)를 자유롭게 옮기고 키우고 돌릴 수 있어요.</li>
+    <li>날짜를 누르면 그날의 기념일 · 일정 · 메모가 오른쪽(폰은 아래)에 보여요. 일정은 끌어서 다른 날로 옮길 수 있어요.</li>
+  </ul>
+</div></details><details><summary>캐릭터 꾸미기 · 대사 기호</summary><div class="a">  <ul class="l">
+    <li><b>그림 한 장</b> — 투명 PNG 한 장이면 돼요. 머리 · 얼굴 · 몸 세 곳을 따로 눌러요.</li>
+    <li><b>파츠로 나눈 그림</b> — 머리 · 몸통 · 팔 · 다리(+ 뒷머리 · 귀 · 꼬리)를 따로 넣으면 그 부위를 눌렀을 때 그 파츠만 움직여요. 아래 <a href="#art">그림 준비하기</a>를 봐 주세요.</li>
+    <li><b>성격</b> — 다정 · 시크 · 수줍음 · 발랄 · 몽글 · 츤츤 중 하나를 고르면 누를 때의 몸짓 · 효과 · 말풍선이 한 번에 정해져요. 같은 성격을 한 번 더 누르면 풀리고 원래대로 돌아가요.</li>
+    <li><b>말소리</b> — 말풍선 글자가 한 글자씩 써지면서 웅얼웅얼 말해요. 높은 톤 · 중간 톤 · 낮은 톤 · 속삭임 · 통통, 톤 높낮이와 말 빠르기도 조절해요. 같은 대사는 늘 같은 말투로 들려요.</li>
+    <li><b>누를 때 소리</b> — 딸깍 · 키보드 · 뽁뽁이 · 연필 · 책장 · 칼림바 · 실로폰 · 유리 딩 · 하프 · 오르골 · 별가루, 또는 내 소리 파일(3MB까지).</li>
+    <li><b>몸짓 · 효과</b> — 부위마다 끄덕 · 통통통 · 펄쩍 · 씰룩씰룩 · 빙글 · 움찔 · 깜짝 같은 몸짓과 하트 뿅뿅 · 꽃 · 느낌표 같은 효과를 골라요. 효과는 [성격 · 대사]에서 아예 끌 수도 있어요.</li>
+    <li><b>대사</b> — [성격 · 대사]에서 부위마다 대사를 적어요. <b>공통 대사</b>는 어느 부위를 눌러도 부위 대사와 섞여서 나오고, <b>혼잣말</b>은 가만히 두면 가끔 혼자 해요.</li>
+    <li><b>말풍선 위치</b> — 그림 위쪽이 비어 있으면 [프로필]에서 위아래 · 좌우로 옮겨요.</li>
+  </ul>
+  <p style="margin-top:12px">대사를 쓸 때 앞뒤에 기호를 붙이면 말풍선 모양이 바뀌어요.</p>
+  <div class="syn">
+    <code>안녕!</code><span>보통 말풍선</span>
+    <code>!깜짝이야</code><span>앞에 <b>!</b> → 놀람 말풍선</span>
+    <code>(배고프다…)</code><span>괄호로 감싸면 → 생각 말풍선</span>
+    <code>~언젠가 바다에</code><span>앞에 <b>~</b> → 상상 말풍선</span>
+    <code>*쾅!</code><span>앞에 <b>*</b> → 효과음 글씨 (풍선 없이 글자가 튀어 올라요)</span>
+    <code>안녕 // 오늘 뭐 해?</code><span>가운데 <b>//</b> → 두 번에 나눠 말해요</span>
+  </div>
+</div></details><details><summary>안드로이드 위젯 · 화면 위 캐릭터</summary><div class="a">  <ul class="l">
+    <li><b>사진 카드 · 사진 카드 4장</b> — 기념일 카드처럼 사진 위에 관계 아이콘 · 이름 · 날짜 · 큰 숫자. 사진이 없으면 예시 그림 위에 캐릭터가 나와요.</li>
+    <li><b>D-day · 캐릭터 / 4개 목록 / 작게</b> — 다음 기념일을 크게, 여럿을 목록으로, 하나만 작게.</li>
+    <li><b>캐릭터 크게</b> — 캐릭터가 말풍선으로 다음 기념일을 한마디 해요.</li>
+    <li><b>오늘 · 내일 / 이번 달 달력</b> — 가까운 일정을 시간 순으로, 달력에는 기념일 · 일정 점.</li>
+    <li><b>도장 카드</b> — 기념일까지 30칸, 날마다 눌러 도장을 찍어요.</li>
+    <li><b>함께한 지 N일째</b> — 시작한 날부터 세고, 다음 100일까지 막대로.</li>
+    <li><b>화면 위 캐릭터</b> — [설정 → 폰 화면에 캐릭터 띄우기]를 켜면 다른 앱 위에도 캐릭터가 떠 있어요. 누르면 말풍선으로 한마디.</li>
+  </ul>
+</div></details><details><summary>PC 바탕화면 캐릭터 · 페어</summary><div class="a">  <ul class="l">
+    <li><b>바탕화면 캐릭터</b> — 다른 창 위에 캐릭터가 떠 있어요. 끌어서 옮기고, 오른쪽 클릭으로 크기를 바꿔요. 그림 밖은 클릭이 통과해요.</li>
+    <li><b>쓰다듬기</b> — 그림 위에서 마우스를 좌우로 슥슥 문지르면 하트가 뿅뿅 올라오고 좋아해요.</li>
+    <li><b>페어 같이 띄우기 (최대 5명)</b> — [페어]에서 [같이 띄우기]를 켜면 나란히 나와서 적어 둔 대화를 주고받아요. 말하는 동안 다른 친구들은 그쪽으로 몸을 기울이고, 대사마다 통통 · 펄쩍 · 다가가기 같은 몸짓을 붙일 수 있어요. 한 명을 누르면 옆 친구들도 반응해요.</li>
+    <li><b>알려 주는 포스트잇</b> — 오늘 일정이 있으면 캐릭터 옆에 포스트잇이 붙어요.</li>
+    <li><b>작은 위젯 창</b> — 창을 작게 만들면 다가오는 날만 타일로 보여요.</li>
+  </ul>
+  <figure class="wide"><img src="guide/pc-home.webp" alt="PC 홈 화면" loading="lazy"><figcaption>PC 홈 화면</figcaption></figure>
+</div></details><details><summary>새 버전 알림</summary><div class="a">  <p>안드로이드 · PC 앱은 하루에 한 번 새 버전이 나왔는지 확인해요. 새 버전이 있으면 홈 맨 위에 알려 주고, [받기]를 누르면 바로 받아요. [설정 → 업데이트]에서 직접 확인할 수도 있어요. 웹앱은 열 때마다 늘 최신이에요.</p>
+</div></details><details><summary>그림 준비하기 (파츠 나누기)</summary><div class="a">
+  <ul class="l">
+    <li>모든 파츠는 <b>같은 크기 캔버스</b>에, 원래 자리에 그린 <b>배경 투명 PNG</b>로 넣어요. 위치를 따로 맞출 필요가 없어요.</li>
+    <li>겹치는 순서: 뒷머리 → 꼬리 → 다리 → 몸통 → 팔 → 머리(얼굴) → 귀</li>
+    <li>머리 칸에는 얼굴 + 눈 + 앞머리를 합친 그림을 넣어요. 표정을 바꾸고 싶으면 '얼굴 2 · 3 · 4'에 표정만 다른 머리를 더 넣어요.</li>
+    <li>[그림] 탭의 '누르는 곳 나누기'에서 머리와 얼굴 사이 선을 움직이고, '부위 색 보기'로 확인해요.</li>
+  </ul>
+  <div class="parts"><img src="assets/mindung.png" alt="민둥이"><div><b>민둥이 파츠 샘플</b><p style="font-size:13.5px;color:var(--sub);margin:2px 0 8px">머리 · 몸통 · 팔 · 다리가 나뉜 429×700 투명 PNG예요. 이 위에 머리카락과 옷을 그려 보세요.</p><a class="btn" href="assets/mindung-parts.zip" download>샘플 받기 <small>ZIP</small></a></div></div>
+</div></details><details><summary>데이터 백업 · 옮기기</summary><div class="a">
+  <ul class="l">
+    <li><b>백업 파일</b> — [설정 → 데이터 → 백업 파일 만들기]. 캐릭터 · 기념일 · 일정 · 달력까지 전부 들어가요. 다른 기기에서 '백업에서 되돌리기'로 그대로 옮겨요.</li>
+    <li><b>캐릭터 파일 (.ddchar)</b> — 캐릭터 → [프로필] 아래 '캐릭터 파일 만들기'. 그림 · 성격 · 말소리 · 대사가 한 파일에 들어가요. 친구에게 줄 수도 있어요. 받은 쪽은 ＋ → '캐릭터 파일 불러오기'.</li>
+    <li><b>캐릭터 전부 내보내기</b> — [설정 → 데이터]에서 모든 캐릭터를 파일 하나로 받아요. 불러오면 한 번에 다 들어가요.</li>
+    <li><b>일정 코드</b> — 일정만 나눌 때는 [일정 → 일정 보내기].</li>
+  </ul>
+  <div class="note">웹앱은 브라우저 저장소를 써요. 브라우저 기록 · 사이트 데이터를 지우면 내용도 같이 지워질 수 있으니, 가끔 백업 파일을 받아 두세요.</div>
+</div></details><details><summary>웹앱 · 안드로이드 · PC 차이</summary><div class="a"><table>
+    <tr><th></th><th>웹앱</th><th>안드로이드</th><th>PC(윈도우)</th></tr>
+    <tr><td>설치</td><td>필요 없음</td><td>APK 설치</td><td>Setup.exe 한 번 실행</td></tr>
+    <tr><td>기념일 · 일정 · 달력 · 캐릭터</td><td class="y">●</td><td class="y">●</td><td class="y">●</td></tr>
+    <tr><td>정해진 시간에 알림</td><td class="x">—</td><td class="y">●</td><td class="y">●</td></tr>
+    <tr><td>홈 화면 위젯</td><td class="x">—</td><td class="y">●</td><td>작은 위젯 창</td></tr>
+    <tr><td>바탕화면 위 캐릭터</td><td class="x">—</td><td class="x">—</td><td class="y">●</td></tr>
+    <tr><td>아이폰</td><td>사파리 → 홈 화면에 추가</td><td class="x">—</td><td class="x">—</td></tr>
+  </table></div></details></div>
+</section>
+
+<section id="faq"><div class="sec-h"><h2>자주 묻는 질문</h2></div>
+  <div class="list faq"><details><summary>PC에서 'Windows의 PC 보호' 창이 떠요</summary><div class="a">개인이 만든 프로그램이라 코드 서명이 없어서 떠요. [추가 정보] → [실행]을 누르면 열려요.</div></details><details><summary>PC는 설치 없이 쓸 수 없나요?</summary><div class="a"><a href="https://github.com/Tsuyu-0/dday-app/releases/latest/download/AnniversaryDday-Portable.exe">설치 없는 버전(exe 하나 · 4MB)</a>을 받아 아무 폴더에 두고 실행하면 돼요. 데이터는 설치 버전과 같은 곳에 저장돼서 둘을 바꿔 써도 이어져요. 윈도우 10 · 11에 들어 있는 WebView2로 돌아가요.</div></details><details><summary>안드로이드 설치가 막혀요</summary><div class="a">플레이스토어 앱이 아니라서 처음 한 번 '출처를 알 수 없는 앱 설치'를 허용해야 해요. 받은 APK를 열면 설정으로 안내돼요. 새 버전은 그냥 덮어 설치하면 데이터가 그대로 남아요.</div></details><details><summary>알림이 안 와요</summary><div class="a">안드로이드는 처음 켤 때 알림 권한을 허용해야 해요. [설정 → 앱 → 기념일 D-day → 알림]에서 확인해 주세요. 앱을 열 때마다 앞으로 60일 안의 알림을 다시 잡아요. 웹앱은 정해진 시간 알림이 안 돼요.</div></details><details><summary>위젯 숫자가 안 바뀌어요</summary><div class="a">위젯은 날짜가 바뀔 때 다시 세요. 기념일을 고친 뒤 앱을 한 번 열면 위젯도 바로 바뀌어요.</div></details><details><summary>PC 아이콘이 예전 그대로예요</summary><div class="a">윈도우가 예전 아이콘을 기억하고 있어서 그래요. 예전 바로가기를 지우고 새 exe로 다시 만들어 주세요.</div></details><details><summary>새 버전을 켰는데 그대로예요 (PC)</summary><div class="a">예전 버전이 트레이(시계 옆)에 켜져 있을 수 있어요. 트레이 아이콘을 오른쪽 클릭 → 종료한 뒤 새 버전을 켜 주세요.</div></details><details><summary>친구랑 실시간으로 같이 쓸 수 있나요?</summary><div class="a">서버 없이 만든 앱이라 실시간 공유는 없어요. 대신 일정 코드 · 캐릭터 파일로 주고받을 수 있어요.</div></details></div>
+</section>
+</main>
+<footer><div class="wrap"><a href="../">OC Atelier</a> · 기념일 D-day · 만든 사람 빵살 · <a href="https://github.com/Tsuyu-0/dday-app">GitHub</a></div></footer>
+</body></html>
