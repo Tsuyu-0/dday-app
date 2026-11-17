@@ -167,6 +167,39 @@ function ovSync(){
     if(!st.granted) el.innerHTML='<span class="note" style="flex:1">먼저 이 앱에 <b>다른 앱 위에 표시</b>를 허용해 주세요. 허용하고 돌아오면 켤 수 있어요.</span><button class="btn pri" data-act="ovperm">허용하러 가기</button>';
     else el.innerHTML=st.running?'<span class="note" style="flex:1">지금 화면에 나와 있어요</span><button class="btn" data-act="ovoff">숨기기</button>':'<span class="note" style="flex:1">권한이 허용되어 있어요</span><button class="btn pri" data-act="ovon">화면에 띄우기</button>'; }); }
 document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&VIEW==="set") setTimeout(ovSync,300); });
+/* 피드백 보내기: Web3Forms로 보내면 만든 사람 메일함으로 바로 가요 (주소는 앱에 안 보여요) */
+var FB_KEY="fc8d7bb7-abf2-487d-bb85-d7292217363d";
+function fbBox(){ return '<div class="box"><div class="box-t">피드백 보내기<small>불편한 점 · 버그 · 이런 기능 있으면 좋겠다</small></div><p class="note" style="margin-bottom:10px">써 주신 내용은 만든 사람에게 바로 전달돼요. 답장이 필요하면 이메일을 같이 적어 주세요.</p><div class="btns"><button class="btn pri" data-act="feedback">피드백 쓰기</button></div></div>'; }
+function openFeedback(){
+  var KINDS=[["bug","버그 · 오류"],["idea","이런 기능 있으면"],["etc","그 밖의 말"]], kind="idea";
+  var w=document.createElement("div"); w.className="veil";
+  w.innerHTML='<div class="dlg fbdlg"><div class="fb-h"><b>피드백 보내기</b><button class="ib" data-x title="닫기">'+X+'</button></div>'+
+    '<div class="chips fb-k">'+KINDS.map(function(k){ return '<button data-k="'+k[0]+'"'+(k[0]===kind?' class="on"':"")+">"+k[1]+"</button>"; }).join("")+"</div>"+
+    '<textarea class="in fb-t" rows="6" maxlength="4000" placeholder="어떤 점이 불편했는지, 어떤 기능이 있으면 좋을지 편하게 적어 주세요. 버그라면 어떤 화면에서 무엇을 눌렀을 때인지 알려 주시면 큰 도움이 돼요."></textarea>'+
+    '<input class="in fb-m" type="email" placeholder="답장 받을 이메일 (선택)">'+
+    '<label class="fb-c"><input type="checkbox" class="fb-d" checked> 버전 · 기기 정보도 같이 보내기 <small>(문제 찾는 데만 써요)</small></label>'+
+    '<input type="checkbox" class="fb-bot" tabindex="-1" autocomplete="off" style="display:none">'+
+    '<div class="btns" style="margin-top:12px"><button class="btn" data-x>취소</button><button class="btn pri fb-send">보내기</button></div></div>';
+  document.body.appendChild(w);
+  var ta=w.querySelector(".fb-t"); setTimeout(function(){ ta.focus(); },50);
+  w.addEventListener("click",function(e){
+    if(e.target===w||e.target.closest("[data-x]")){ if(ta.value.trim()&&e.target===w) return; w.remove(); return; }
+    var k=e.target.closest("[data-k]"); if(k){ kind=k.dataset.k; w.querySelectorAll("[data-k]").forEach(function(b){ b.classList.toggle("on",b===k); }); return; }
+    var sb=e.target.closest(".fb-send"); if(!sb) return;
+    var msg=ta.value.trim(); if(msg.length<2){ toast("내용을 적어 주세요"); ta.focus(); return; }
+    if(w.querySelector(".fb-bot").checked){ w.remove(); return; }
+    if(!FB_KEY){ toast("피드백 보내기를 준비하고 있어요. 다음 버전에서 열려요"); return; }
+    var mail=w.querySelector(".fb-m").value.trim(), lb=KINDS.filter(function(x){return x[0]===kind})[0][1];
+    sb.disabled=true; sb.textContent="보내는 중…";
+    (w.querySelector(".fb-d").checked?api.version().catch(function(){return "?";}):Promise.resolve(null)).then(function(v){
+      var plat=window.__TAURI__?(/Mac/i.test(navigator.platform||"")?"맥":"윈도우"):(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()?"안드로이드":"웹앱");
+      var body={access_key:FB_KEY,subject:"[기념일 D-day] "+lb+" 피드백",from_name:"기념일 D-day 앱",kind:lb,message:msg};
+      if(mail) body.email=mail; if(v) body.info="v"+v+" · "+plat+" · "+navigator.userAgent.slice(0,160);
+      return fetch("https://api.web3forms.com/submit",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)}).then(function(r){ return r.json(); });
+    }).then(function(r){ if(r&&r.success){ w.remove(); toast("보냈어요! 고마워요 :)"); } else throw 0; })
+      .catch(function(){ sb.disabled=false; sb.textContent="다시 보내기"; toast("못 보냈어요. 인터넷 연결을 확인하고 다시 눌러 주세요"); });
+  });
+}
 function updBox(){
   var has=!!(api.checkUpdate||window.ddCheckUpdate);
   if(!has) return "";
@@ -393,7 +426,7 @@ function setView(){
     tile("s-hide",!!c.allHidden,"잠깐 다 숨기기","트레이 아이콘을 누르면 돌아와요")+
     tile("s-login",c.launchAtLogin!==false,"컴퓨터 켜면 같이 시작","관리 창 없이 캐릭터만 떠요")+"</div></div>"+
     '<div class="box"><div class="box-t">소리</div><div class="tiles" style="margin-bottom:12px">'+tile("s-mute",!!c.mute,"무음 모드","캐릭터를 눌러도 조용해요")+'</div><div class="lbl">누를 때 소리 크기</div><div class="slide"><input type="range" id="s-vol" min="0" max="100" value="'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'"><span class="val" id="s-vol-v">'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'%</span></div><div class="lbl">말소리 크기</div><div class="slide"><input type="range" id="s-vvol" min="0" max="100" value="'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'"><span class="val" id="s-vvol-v">'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'%</span></div><p class="note" style="margin-top:8px">어떤 소리가 날지는 캐릭터마다 [성격 · 대사]에서 골라요.</p></div>'+
-    ovBox()+updBox()+
+    ovBox()+updBox()+fbBox()+
     '<div class="box"><div class="box-t">데이터</div><div class="btns"><button class="btn" data-act="backup">백업 파일 만들기</button><label class="btn">백업에서 되돌리기<input type="file" id="rf" accept=".json,application/json"></label><button class="btn" data-act="charexpall">캐릭터 전부 내보내기</button><label class="btn">캐릭터 불러오기<input type="file" id="charimp" accept=".ddchar,.json,application/json"></label><button class="btn ghost" data-act="folder">저장 폴더 열기</button></div></div>'+
     '<p class="note" style="text-align:center;margin-top:18px">기념일 D-day <span id="ver2"></span></p></div>';
 }
@@ -796,6 +829,7 @@ app.addEventListener("click",function(e){
   if(a==="del") ask("'"+(t.nick||t.name||"이 캐릭터")+"'를 지울까요? 되돌릴 수 없어요.","지우기").then(function(ok){ if(!ok) return; var id=SEL; S.tokens=S.tokens.filter(function(z){return z.id!==id}); S.pairs.forEach(function(p){p.tokenIds=p.tokenIds.filter(function(z){return z!==id})}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="token"&&z.who.id===id); }); (S.events||[]).forEach(function(z){ if(z.who&&z.who.type==="token"&&z.who.id===id) z.who=null; if(z.star===id) z.star=null; }); if(S.settings.main===id){ S.settings.main=null; setCfg("main",null); } SEL=null; SUB="basic"; saveSoon(true); render(); toast("지웠어요"); });
   if(a==="pduo"){ var pd=pairOf(b); setCfg("duo",S.settings.duo===pd.id?"":pd.id); saveSoon(true); render(); toast(S.settings.duo?"바탕화면에 둘이 같이 나와요":"한 명만 나와요"); return; }
   if(a==="dlauto"||a==="dlvoice"){ var pz=pairOf(b), kz=a==="dlauto"?"duoAuto":"duoVoice"; pz[kz]=pz[kz]===false; saveSoon(true); render(); toast(a==="dlauto"?(pz.duoAuto?"가끔 저절로 대화해요":"저절로 대화하지 않아요 · 우클릭 [둘이 이야기하기]로는 할 수 있어요"):(pz.duoVoice?"대화할 때 말소리가 나요":"대화는 소리 없이 말풍선만 떠요")); return; }
+  if(a==="feedback"){ openFeedback(); return; }
   if(a==="pfold"){ var pf=pairOf(b); pf.fold=!pf.fold; saveSoon(true); render(); return; }
   if(a==="pfoldall"){ var allF=S.pairs.every(function(p){return p.fold}); S.pairs.forEach(function(p){ p.fold=!allF; }); saveSoon(true); render(); return; }
   if(a==="dlfold"||a==="dlfoldall"){ var pz2=pairOf(b), ids3=pz2.tokenIds.filter(function(id){return tokById(id)}).slice(0,5), D3=pairDialogs(pz2,ids3)||[], F=(pz2.dlgFold||[]).slice(0,D3.length);
