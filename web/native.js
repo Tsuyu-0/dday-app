@@ -51,11 +51,16 @@
       var date = a.y ? a.y + "." + String(a.m).padStart(2, "0") + "." + String(a.d).padStart(2, "0") + "(" + WD[new Date(a.y, a.m - 1, a.d).getDay()] + ")" : String(a.m).padStart(2, "0") + "." + String(a.d).padStart(2, "0");
       var name = AN.whoName(S, a.who);
       return {
-        meta: { t: a.title, who: name, date: date, mode: since ? "since" : "dday", s: since ? a.y + "-" + String(a.m).padStart(2, "0") + "-" + String(a.d).padStart(2, "0") : "", d: ymd(n.date), label: n.label && n.label !== a.title ? n.label : "", pin: !!a.pin, color: (t && t.color) || "#4f7cff", img: !!a.img },
+        meta: { t: a.title, who: name, date: date, mode: since ? "since" : "dday", s: since ? a.y + "-" + String(a.m).padStart(2, "0") + "-" + String(a.d).padStart(2, "0") : "", d: ymd(n.date), label: n.label && n.label !== a.title ? n.label : "", pin: !!a.pin, color: (t && t.color) || "#4f7cff", img: !!a.img, icon: iconOf(a), bg: hashN(a.id || a.title, 6) },
         a: a, t: t, imgKey: (a.img || "").length + ":" + (t ? t.id : ""),
       };
     });
   }
+  function iconOf(a) {
+    if (a.icon) return a.icon; var t = (a.title || "") + " ";
+    return /생일|탄신/.test(t) ? "cake" : /결혼|웨딩|약혼|프러포즈|청혼/.test(t) ? "ring" : /우정|친구/.test(t) ? "clover" : /데뷔|첫/.test(t) ? "star" : /이별|헤어/.test(t) ? "broken" : "heart";
+  }
+  function hashN(s, n) { var h = 0; s = String(s || ""); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h) % n; }
   /* 카드 이미지: 넣어 둔 사진은 작게 줄여서, 없으면 그 캐릭터 그림 */
   function cardImage(c) {
     if (c.a.img) return loadImg(c.a.img).then(function (im) {
@@ -132,7 +137,7 @@
     var who = first && tok(S, AN.starOf(S, first.a)) || tok(S, (S.settings || {}).main) || (S.tokens || [])[0];
     var line = first ? AN.defaultLine(S, first.a, first.n) : "";
     var cl = cardList(S);
-    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first), cards: cl.map(function (c) { return c.meta; }), wstyle: (S.settings || {}).widgetStyle || "photo" };
+    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first), cards: cl.map(function (c) { return c.meta; }) };
     var key = JSON.stringify([data, who && who.id, who && (who.img && who.img.src || "").length, who && Object.keys(who.parts || {}).length, cl.map(function (c) { return c.imgKey; })]);
     if (key !== last) {
       last = key;

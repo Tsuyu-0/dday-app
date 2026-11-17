@@ -694,3 +694,8 @@ body.dark .dl-row.b .dl-who{background:rgba(255,92,154,.14)}
 .ws-sticker .ws-pv{background:#fde8f0 radial-gradient(#f6c3d6 1.2px,transparent 1.4px) 0 0/10px 10px;color:#2a2f3a;outline:1.5px dashed #f19bbd;outline-offset:-5px}.ws-sticker .ws-pv b{background:#ff6fa0;color:#fff;font-size:13px;padding:2px 9px;border-radius:99px}
 .ws-minimal .ws-pv{background:#fff;color:#15181f;box-shadow:inset 0 0 0 1px #e6e9ef;border-left:4px solid #4f7cff}.ws-minimal .ws-pv i{opacity:.25}
 .ws-night .ws-pv{background:linear-gradient(135deg,#1c2033,#2b2346);color:#edebff}.ws-night .ws-pv b{text-shadow:0 0 8px #9a8cff}
+.acard .hrt .aic{width:22px;height:22px;display:block;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.18))}
+.icpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.icpick button{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line2);background:var(--card,#fff);display:flex;align-items:center;justify-content:center;padding:0}
+.icpick button .aic{width:26px;height:26px}
+.icpick button.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--accs);background:var(--accs)}

@@ -27,7 +27,7 @@ public class PhotoCards {
         return out;
     }
 
-    static String style(Context ctx) { return WidgetBase.data(ctx).optString("wstyle", "photo"); }
+    static String style(Context ctx) { return "photo"; }
 
     static String bigText(JSONObject c) {
         if ("since".equals(c.optString("mode"))) {
@@ -138,7 +138,7 @@ public class PhotoCards {
             Paint fill = new Paint(); fill.setColor(tint(col, .25f)); cv.drawCircle(cx, cy, d / 2, fill);
             if (c.optBoolean("img")) cover(cv, b, new RectF(cx - d / 2, cy - d / 2, cx + d / 2, cy + d / 2), p); else contain(cv, b, new RectF(cx - d / 2, cy - d / 2, cx + d / 2, cy + d * .62f), p);
             cv.restore(); }
-        heart(cv, cx + d * .22f, cy - d / 2 - 4 * k, 16 * k, c.optBoolean("pin"));
+        icon(ctx, cv, c, cx + d * .22f, cy - d / 2 - 4 * k, 16 * k);
         float tx = cx + d / 2 + 10 * k, tw = r.right - tx - 10 * k;
         Paint t = new Paint(Paint.ANTI_ALIAS_FLAG); t.setColor(0xFF2A2F3A); t.setTypeface(Typeface.DEFAULT_BOLD); float tsz = Math.min(13.5f * k, r.height() * .13f); t.setTextSize(tsz);
         cv.drawText(fit(t, titleOf(c), tw), tx, r.top + r.height() * .3f, t);
@@ -204,43 +204,50 @@ public class PhotoCards {
         cv.drawText(bigText(c), r.right - pad, r.bottom - pad, n);
     }
 
-    /** 사진 카드(기본) */
+    static Bitmap res(Context ctx, String name) {
+        int id = ctx.getResources().getIdentifier(name, "drawable", ctx.getPackageName());
+        if (id == 0) return null;
+        BitmapFactory.Options o = new BitmapFactory.Options(); o.inScaled = false;
+        return BitmapFactory.decodeResource(ctx.getResources(), id, o);
+    }
+    static void icon(Context ctx, Canvas cv, JSONObject c, float x, float y, float s) {
+        Bitmap ic = res(ctx, "ic_rel_" + c.optString("icon", "heart"));
+        if (ic == null) ic = res(ctx, "ic_rel_heart");
+        if (ic == null) { heart(cv, x, y, s, false); return; }
+        Paint sh = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        cv.drawBitmap(ic, null, new RectF(x - s * .1f, y - s * .1f, x + s * 1.1f, y + s * 1.1f), sh);
+    }
+
+    /** 사진 카드: 넣은 사진, 없으면 예시 그림 + 캐릭터 */
     static void cardPhoto(Context ctx, Canvas cv, RectF r, JSONObject c, float k) {
         float rad = 16 * k;
         Path clip = new Path(); clip.addRoundRect(r, rad, rad, Path.Direction.CW);
         cv.save(); cv.clipPath(clip);
-        int col; try { col = Color.parseColor(c.optString("color", "#4f7cff")); } catch (Exception e) { col = 0xFF4F7CFF; }
         Bitmap b = img(ctx, c.optInt("_i"));
         boolean photo = c.optBoolean("img") && b != null;
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        if (photo) {
-            float sc = Math.max(r.width() / b.getWidth(), r.height() / b.getHeight());
-            float w = b.getWidth() * sc, h = b.getHeight() * sc;
-            cv.drawBitmap(b, null, new RectF(r.centerX() - w / 2, r.centerY() - h / 2, r.centerX() + w / 2, r.centerY() + h / 2), p);
-            Paint g = new Paint(); g.setShader(new LinearGradient(0, r.top, 0, r.bottom, new int[] { 0x88000000, 0x10000000, 0x10000000, 0x80000000 }, new float[] { 0, .42f, .55f, 1 }, Shader.TileMode.CLAMP));
-            cv.drawRect(r, g);
-        } else {
-            Paint g = new Paint(); g.setShader(new LinearGradient(r.left, r.top, r.right, r.bottom, tint(col, .38f), tint(col, .14f), Shader.TileMode.CLAMP));
-            cv.drawRect(r, g);
-            if (b != null) { // 캐릭터 그림을 오른쪽 아래에
-                float h = r.height() * .98f, w = h * b.getWidth() / b.getHeight();
-                cv.drawBitmap(b, null, new RectF(r.right - w * .92f, r.bottom - h * .9f, r.right + w * .08f, r.bottom + h * .1f), p);
+        if (photo) cover(cv, b, r, p);
+        else {
+            Bitmap ex = res(ctx, "sample_bg_" + c.optInt("bg", 0));
+            if (ex != null) cover(cv, ex, r, p);
+            else { int col = colorOf(c); Paint g = new Paint(); g.setShader(new LinearGradient(r.left, r.top, r.right, r.bottom, tint(col, .38f), tint(col, .14f), Shader.TileMode.CLAMP)); cv.drawRect(r, g); }
+            if (b != null) { // 캐릭터를 오른쪽 아래에
+                float h = r.height() * .92f, w = h * b.getWidth() / b.getHeight();
+                Paint cs = new Paint(p); cs.setShadowLayer(6 * k, 0, 2 * k, 0x33000000);
+                cv.drawBitmap(b, null, new RectF(r.right - w * .95f, r.bottom - h * .86f, r.right + w * .05f, r.bottom + h * .14f), cs);
             }
         }
-        int fg = photo ? Color.WHITE : 0xFF1B2230;
+        Paint g = new Paint(); g.setShader(new LinearGradient(0, r.top, 0, r.bottom, new int[] { 0x80000000, 0x0A000000, 0x0A000000, 0x70000000 }, new float[] { 0, .42f, .58f, 1 }, Shader.TileMode.CLAMP));
+        cv.drawRect(r, g);
         float pad = 11 * k, hs = 22 * k;
-        heart(cv, r.left + pad, r.top + pad, hs, c.optBoolean("pin"));
-        Paint t = new Paint(Paint.ANTI_ALIAS_FLAG); t.setColor(fg); t.setTypeface(Typeface.DEFAULT_BOLD);
-        float tsz = Math.min(15 * k, r.height() * .13f); t.setTextSize(tsz);
-        if (photo) t.setShadowLayer(3 * k, 0, 1 * k, 0x99000000);
-        float tx = r.left + pad + hs + 6 * k, tw = r.right - tx - pad;
-        String who = c.optString("who", ""), title = (who.isEmpty() ? "" : who + " ") + c.optString("t");
-        cv.drawText(fit(t, title, tw), tx, r.top + pad + tsz * .95f, t);
-        Paint d = new Paint(t); d.setTypeface(Typeface.DEFAULT); d.setTextSize(tsz * .74f); d.setColor(photo ? 0xE6FFFFFF : 0xFF5A6273);
-        String sub = c.optString("date") + (c.optString("label").isEmpty() ? "" : " · " + c.optString("label"));
-        cv.drawText(fit(d, sub, tw), tx, r.top + pad + tsz * 1.95f, d);
-        Paint n = new Paint(t); n.setTextSize(Math.min(30 * k, r.height() * .27f)); n.setTextAlign(Paint.Align.RIGHT);
-        if (!photo) n.setShadowLayer(4 * k, 0, 0, 0xCCFFFFFF);
+        icon(ctx, cv, c, r.left + pad, r.top + pad, hs);
+        Paint t = new Paint(Paint.ANTI_ALIAS_FLAG); t.setColor(Color.WHITE); t.setTypeface(Typeface.DEFAULT_BOLD);
+        float tsz = Math.min(15 * k, r.height() * .13f); t.setTextSize(tsz); t.setShadowLayer(3 * k, 0, 1 * k, 0x99000000);
+        float tx = r.left + pad + hs + 7 * k, tw = r.right - tx - pad;
+        cv.drawText(fit(t, titleOf(c), tw), tx, r.top + pad + tsz * .95f, t);
+        Paint d = new Paint(t); d.setTypeface(Typeface.DEFAULT); d.setTextSize(tsz * .74f); d.setColor(0xEEFFFFFF);
+        cv.drawText(fit(d, subOf(c), tw), tx, r.top + pad + tsz * 1.95f, d);
+        Paint n = new Paint(t); n.setTextSize(Math.min(30 * k, r.height() * .27f)); n.setTextAlign(Paint.Align.RIGHT); n.setShadowLayer(4 * k, 0, 1.5f * k, 0xAA000000);
         cv.drawText(bigText(c), r.right - pad, r.bottom - pad - n.descent() * .3f, n);
         cv.restore();
     }
