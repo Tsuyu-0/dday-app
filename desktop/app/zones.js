@@ -79,8 +79,16 @@ Z.present=function(map){ var seen={}; if(map) for(var i=0;i<map.length;i++) if(m
 Z.at=function(map,fx,fy){
   if(!map) return fx>=0&&fy>=0&&fx<=1&&fy<=1?"face":null;
   var x=Math.round(fx*(N-1)), y=Math.round(fy*(N-1));
-  for(var r=0;r<=4;r+=2) for(var dy=-r;dy<=r;dy+=2) for(var dx=-r;dx<=r;dx+=2){ var xx=x+dx, yy=y+dy; if(xx<0||yy<0||xx>=N||yy>=N) continue; var v=map[yy*N+xx]; if(v) return KEYS[v]; }
-  return null;
+  var near=function(want,R){ for(var r=1;r<=R;r++) for(var dy=-r;dy<=r;dy++) for(var dx=-r;dx<=r;dx++){ if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue; var xx=x+dx, yy=y+dy; if(xx<0||yy<0||xx>=N||yy>=N) continue; if(want.indexOf(map[yy*N+xx])>=0) return map[yy*N+xx]; } return 0; };
+  var v=x>=0&&y>=0&&x<N&&y<N?map[y*N+x]:0;
+  /* 팔·다리는 가늘어서 작게 띄우면 누르기 어려워요: 몸통 가장자리나 바로 바깥을 눌러도 팔·다리로 쳐줘요 */
+  if(v===3){ var h=near([4],2); if(h) return KEYS[h]; }
+  if(v) return KEYS[v];
+  /* 빈 곳: 가장 가까운 부위로 (팔·다리는 2칸 가산점) */
+  var best=0, bs=1e9;
+  for(var dy=-7;dy<=7;dy++) for(var dx=-7;dx<=7;dx++){ var xx=x+dx, yy=y+dy; if(xx<0||yy<0||xx>=N||yy>=N) continue; var w=map[yy*N+xx]; if(!w) continue;
+    var d=Math.sqrt(dx*dx+dy*dy), lim=(w===4||w===5); if(!lim&&d>4.5) continue; var sc=d-(lim?2:0); if(sc<bs){ bs=sc; best=w; } }
+  return best?KEYS[best]:null;
 };
 Z.paint=function(map,canvas){
   canvas.width=canvas.height=N; var x=canvas.getContext("2d"), img=x.createImageData(N,N);

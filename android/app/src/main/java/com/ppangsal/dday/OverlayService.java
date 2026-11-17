@@ -56,11 +56,24 @@ public class OverlayService extends Service {
     String zoneAt(float fx, float fy) {
         if (zmap.length() != 2500) return null;
         int x = Math.round(fx * 49), y = Math.round(fy * 49);
+        int v0 = (x >= 0 && y >= 0 && x <= 49 && y <= 49) ? zmap.charAt(y * 50 + x) - '0' : 0;
+        // 팔·다리는 가늘어서: 몸통 가장자리나 바로 바깥을 눌러도 팔·다리로
+        if (v0 == 3) { int h = near(x, y, 1, 4, 4); if (h > 0) return ZK[h]; }
+        if (v0 > 0 && v0 < ZK.length) return ZK[v0];
+        int lim = near(x, y, 2, 4, 5); if (lim > 0) return ZK[lim];
         for (int r = 0; r <= 2; r++) for (int dy = -r; dy <= r; dy++) for (int dx = -r; dx <= r; dx++) {
             int xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx > 49 || yy > 49) continue;
             int v = zmap.charAt(yy * 50 + xx) - '0'; if (v > 0 && v < ZK.length) return ZK[v];
         }
         return null;
+    }
+    int near(int x, int y, int R, int a, int b) {
+        for (int r = 1; r <= R; r++) for (int dy = -r; dy <= r; dy++) for (int dx = -r; dx <= r; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) != r) continue;
+            int xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx > 49 || yy > 49) continue;
+            int v = zmap.charAt(yy * 50 + xx) - '0'; if (v == a || v == b) return v;
+        }
+        return 0;
     }
     String pickFor(float fx, float fy) { String z = zoneAt(fx, fy); List<String> L = z == null ? null : zoneLines.get(z); return L != null && !L.isEmpty() ? L.get(rnd.nextInt(L.size())) : pick(); }
     String greet = "", name = "";
