@@ -22,14 +22,14 @@
 
   /* 캐릭터 창: 그림 위에 있을 때만 마우스를 받고, 나머지는 바탕화면으로 통과.
      통과 중에는 마우스 움직임이 안 들어와서 커서 위치를 조금씩 확인해 대신 알려 줘요. */
-  var ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0;
+  var ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0, walkUntil = 0;
   function refreshPos() { return Promise.all([win.outerPosition(), win.scaleFactor()]).then(function (r) { k = r[1] || 1; pos = { x: r[0].x, y: r[0].y }; posT = Date.now(); }).catch(function () {}); }
   function setIgnore(v) { v = !!v; if (v === ignoring) return; ignoring = v; win.setIgnoreCursorEvents(v).catch(function () {}); }
   function poll() {
     if (!/^pet/.test(me)) return;
     setTimeout(poll, ignoring ? 70 : 250);
     if (!ignoring || dragFrom) return;
-    var p = Date.now() - posT > 1500 ? refreshPos() : Promise.resolve();
+    var p = Date.now() - posT > 1500 || Date.now() < walkUntil ? refreshPos() : Promise.resolve();
     p.then(function () { return T.window.cursorPosition(); }).then(function (c) {
       if (!pos || !c) return;
       var x = (c.x - pos.x) / k, y = (c.y - pos.y) / k;
@@ -88,6 +88,8 @@
     walkInfo: function () { return Promise.all([win.outerPosition(), win.outerSize(), win.scaleFactor(), T.window.currentMonitor()]).then(function (r) {
       var m = r[3] || {}, wa = m.workArea || { position: m.position || { x: 0, y: 0 }, size: m.size || { width: 1920, height: 1080 } };
       return { x: r[0].x, y: r[0].y, w: r[1].width, h: r[1].height, sf: r[2] || 1, ax: wa.position.x, aw: wa.size.width }; }); },
+    walkMove: function (fromX, toX, y, ms) { walkUntil = Date.now() + ms + 300; return T.core.invoke("walk_move", { fromX: fromX, toX: toX, y: y, ms: Math.round(ms) }).catch(function () {}); },
+    walkStop: function () { walkUntil = 0; refreshPos(); return T.core.invoke("walk_stop").catch(function () {}); },
     walkSetX: function (x, y) { var PP = DPI.PhysicalPosition; pos = { x: Math.round(x), y: y }; posT = Date.now(); return win.setPosition(new PP(Math.round(x), y)).catch(function () {}); },
     walkDone: function () { refreshPos(); send("pet:walked"); },
     walkFriends: function () { return call("pet:friends"); },

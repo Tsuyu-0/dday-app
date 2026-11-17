@@ -106,6 +106,35 @@ fn started_hidden() -> bool { std::env::args().any(|a| a == "--hidden") }
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) { QUITTING.store(true, Ordering::SeqCst); let _ = app.emit("quitting", ()); std::thread::sleep(std::time::Duration::from_millis(300)); app.exit(0); }
 
+/* 돌아다니기: 창을 Rust 쪽에서 촘촘하게(약 120번/초) 옮겨야 덜 끊겨요. 창마다 번호를 올려서 새 걸음이 오면 이전 걸음은 멈춰요 */
+static WALK_GEN: std::sync::Mutex<Option<std::collections::HashMap<String, u64>>> = std::sync::Mutex::new(None);
+fn walk_gen(label: &str, bump: bool) -> u64 {
+    let mut g = WALK_GEN.lock().unwrap();
+    let m = g.get_or_insert_with(std::collections::HashMap::new);
+    let e = m.entry(label.to_string()).or_insert(0);
+    if bump { *e += 1; }
+    *e
+}
+#[tauri::command]
+fn walk_move(window: tauri::WebviewWindow, from_x: f64, to_x: f64, y: i32, ms: u64) {
+    let label = window.label().to_string();
+    let me = walk_gen(&label, true);
+    std::thread::spawn(move || {
+        let t0 = std::time::Instant::now();
+        let total = std::time::Duration::from_millis(ms.max(1));
+        loop {
+            if walk_gen(&label, false) != me { return; }
+            let k = (t0.elapsed().as_secs_f64() / total.as_secs_f64()).min(1.0);
+            let x = from_x + (to_x - from_x) * k;
+            let _ = window.set_position(tauri::PhysicalPosition::new(x.round() as i32, y));
+            if k >= 1.0 { return; }
+            std::thread::sleep(std::time::Duration::from_millis(8));
+        }
+    });
+}
+#[tauri::command]
+fn walk_stop(window: tauri::WebviewWindow) { walk_gen(window.label(), true); }
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| { let _ = app.emit_to("core", "second-instance", ()); }))
@@ -113,7 +142,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app])
+        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop])
         .on_window_event(|w, e| {
             // 관리 창 X → 끄지 않고 숨겨서 트레이에 남아요
             if let tauri::WindowEvent::CloseRequested { api, .. } = e {

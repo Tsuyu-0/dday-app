@@ -193,17 +193,16 @@ var W=(function(){
     }).catch(function(){});
   }
   function walk(I,target){
-    walking=true; abort=false; var dir=target>I.x?1:-1, sf=I.sf, spd=(T.desk.wanderSpeed||1);
-    var hopLen=40*sf*spd, hopMs=430/Math.sqrt(spd), dist=Math.abs(target-I.x), hops=Math.max(1,Math.round(dist/hopLen)), total=hops*hopMs, t0=performance.now(), x0=I.x;
+    walking=true; abort=false; var dir=target>I.x?1:-1, spd=(T.desk.wanderSpeed||1), sf=I.sf;
+    var hopLen=40*sf*spd, hopMs=430/Math.sqrt(spd), dist=Math.abs(target-I.x), hops=Math.max(1,Math.round(dist/hopLen)), total=hops*hopMs, t0=performance.now();
     clearTimeout(faceT); look(dir); stage.style.transition="none";
+    if(api.walkMove) api.walkMove(I.x,target,I.y,total); else api.walkSetX(target,I.y);
     (function frame(){
-      var el=performance.now()-t0, k=Math.min(1,el/total);
-      if(abort||dragging){ end(); return; }
-      var ph=(el%hopMs)/hopMs, up=Math.sin(Math.min(1,ph)*Math.PI), sq=ph<.12?1-(.12-ph)*.6:1;
+      if(abort||dragging){ if(api.walkStop) api.walkStop(); end(); return; }
+      var el=performance.now()-t0; if(el>=total){ end(); return; }
+      var ph=(el%hopMs)/hopMs, up=Math.sin(ph*Math.PI), sq=ph<.1?.9+ph:(ph>.9?1-(ph-.9):1);
       stage.style.translate="0 "+(-up*12)+"px"; stage.style.scale=(2-sq)+" "+sq;
-      api.walkSetX(x0+(target-x0)*k,I.y);
-      if(k>=1){ end(); return; }
-      setTimeout(frame,33);
+      requestAnimationFrame(frame);
     })();
     function end(){ walking=false; stage.style.translate=""; stage.style.scale=""; faceT=setTimeout(function(){ look(0); },1600); api.walkDone(); }
   }
