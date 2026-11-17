@@ -348,8 +348,13 @@ function dialogBox(p,ids,duoOn){
   var D=pairDialogs(p,ids)||[], live=window.__TAURI__&&duoOn, n=Math.max(2,ids.length);
   var who=function(w){ var t=tokById(ids[w]); return '<span class="av">'+(t?tokPreview(t):"")+'</span><span class="wn">'+esc(t?(t.nick||t.name||""):"?")+"</span>"; };
   var h='<div class="lbl" style="margin-top:4px">같이 나누는 대화 <span class="note" style="font-weight:400">'+(D.length?D.length+"개 · 가끔 그중 하나를 골라 주고받아요":"아직 없어서 기본 대화 "+DUO_DEF.length+"개를 써요")+"</span></div>";
+  var FD=p.dlgFold||[];
+  if(D.length) h+='<div class="dl-tools"><button class="lk" data-act="dlfoldall">'+(D.every(function(c,i){return FD[i]})?"모두 펼치기":"모두 접기")+'</button><span class="sp"></span><button class="lk" data-act="talkexp">대화 내보내기</button><label class="lk">대화 불러오기<input type="file" class="talkimp" data-pid="'+p.id+'" accept=".ddtalk,.json,application/json" hidden></label></div>';
+  else h+='<div class="dl-tools"><span class="sp"></span><label class="lk">대화 불러오기<input type="file" class="talkimp" data-pid="'+p.id+'" accept=".ddtalk,.json,application/json" hidden></label></div>';
   h+='<div class="dlgs">'+D.map(function(c,i){
-    return '<div class="dlg2" data-dlg="'+i+'"><div class="dlg2-h"><b>대화 '+(i+1)+"</b>"+(live?'<button class="lk" data-act="dlgplay" data-i="'+i+'">▶ 들어 보기</button>':"")+'<button class="ib" data-act="dlgdel" data-i="'+i+'" title="이 대화 지우기">'+X+"</button></div>"+
+    if(FD[i]){ var f0=c[0]||{}, t0=tokById(ids[(f0.w||0)%n]);
+      return '<div class="dlg2 folded" data-dlg="'+i+'"><button class="dlg2-h dl-fold" data-act="dlfold" data-i="'+i+'"><span class="chev">›</span><b>대화 '+(i+1)+'</b><span class="pv">'+esc((t0?(t0.nick||t0.name||"")+": ":"")+(f0.t||"(빈 대사)"))+'</span><span class="cnt">'+c.length+"마디</span></button></div>"; }
+    return '<div class="dlg2" data-dlg="'+i+'"><div class="dlg2-h"><button class="dl-fold" data-act="dlfold" data-i="'+i+'" title="접기"><span class="chev open">›</span><b>대화 '+(i+1)+"</b></button>"+(live?'<button class="lk" data-act="dlgplay" data-i="'+i+'">▶ 들어 보기</button>':"")+'<button class="ib" data-act="dlgdel" data-i="'+i+'" title="이 대화 지우기">'+X+"</button></div>"+
       c.map(function(l,j){ var w=(l.w||0)%n, sty=DLG_STY.filter(function(x){return x[0]===(l.s||"")})[0]||DLG_STY[0], mo=DLG_MO.filter(function(x){return x[0]===(l.m||"")})[0]||DLG_MO[0], cl=WCOL[w%5];
         return '<div class="dl-row"><button class="dl-who" style="border-color:'+cl[0]+';background:'+cl[1]+'" data-act="dlwho" data-i="'+i+'" data-j="'+j+'" title="누르면 말하는 사람이 바뀌어요">'+who(w)+'</button><input class="in dl-t" data-dl="'+i+"|"+j+'" value="'+esc(l.t)+'" placeholder="대사"><button class="dl-sty s-'+(l.s||"speech")+'" data-act="dlsty" data-i="'+i+'" data-j="'+j+'" title="누르면 말풍선 모양이 바뀌어요">'+sty[1]+'</button><button class="dl-sty dl-mo'+(l.m?" on":"")+'" data-act="dlmo" data-i="'+i+'" data-j="'+j+'" title="누르면 몸짓이 바뀌어요">'+mo[1]+'</button><button class="ib" data-act="dldel" data-i="'+i+'" data-j="'+j+'" title="이 줄 지우기">'+X+"</button></div>"; }).join("")+
       '<button class="dl-add" data-act="dladd" data-i="'+i+'">＋ 한 마디</button></div>';
@@ -362,11 +367,14 @@ function dialogBox(p,ids,duoOn){
 function pairView(){
   var h='<div class="wrap"><div class="h1">페어</div><p class="lead">함께 묶어 둔 캐릭터들이에요. 기념일을 붙일 때 페어 단위로 고를 수 있어요.</p>';
   if(!S.pairs.length&&S.tokens.length>=2) h+='<div class="empty">아직 묶은 페어가 없어요.</div>';
+  if(S.pairs.length>1) h+='<div class="dl-tools" style="margin:-4px 0 10px"><span class="sp"></span><button class="lk" data-act="pfoldall">'+(S.pairs.every(function(p){return p.fold})?"페어 모두 펼치기":"페어 모두 접기")+"</button></div>";
   h+=S.pairs.map(function(p){
     var mem=p.tokenIds.filter(function(id){return tokById(id)}), five=mem.slice(0,5), duoOn=S.settings.duo===p.id, nm=function(id){ var t=tokById(id); return t?(t.nick||t.name||""):""; }, names=five.map(nm).join(" · ");
     var duo=window.__TAURI__?'<div class="duo"><div class="duo-h"><b>바탕화면에 같이 띄우기</b><span class="note">'+(five.length<2?"캐릭터를 두 명 이상 고르면 켤 수 있어요":duoOn?"지금 "+esc(names)+" 나와 있어요":"켜면 바탕화면에 "+five.length+"명이 나란히 나와서 가끔 서로 이야기해요")+(mem.length>5?" (앞의 5명까지)":"")+'</span><button class="btn'+(duoOn?"":" pri")+'" data-act="pduo"'+(five.length<2?" disabled":"")+'>'+(duoOn?"끄기":"같이 띄우기")+'</button></div>':'<div class="duo"><div class="duo-h"><b>같이 나누는 대화</b><span class="note">PC 앱에서 페어를 바탕화면에 같이 띄우면 이 대화를 주고받아요</span></div>';
     duo+=dialogBox(p,five,duoOn)+'</div>';
-    return '<div class="box" data-pair="'+p.id+'"><div class="box-t"><input class="in" data-pf="name" value="'+esc(p.name)+'" placeholder="페어 이름" style="font-weight:700;max-width:280px"><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+'</button></div><div class="mem">'+S.tokens.map(function(t){ return '<button data-mem="'+t.id+'"'+(p.tokenIds.indexOf(t.id)>=0?' class="on"':"")+'><span class="av" style="background:'+tint(t.color,.2)+'">'+tokPreview(t)+"</span>"+esc(t.nick||t.name)+"</button>"; }).join("")+"</div>"+duo+"</div>";
+    var nD=(pairDialogs(p,five)||[]).length, fbtn='<button class="ib pfold" data-act="pfold" title="'+(p.fold?"펼치기":"접기")+'"><span class="chev'+(p.fold?"":" open")+'">›</span></button>';
+    if(p.fold) return '<div class="box pfolded" data-pair="'+p.id+'"><div class="box-t">'+fbtn+'<button class="pf-sum" data-act="pfold"><b>'+esc(p.name||"이름 없는 페어")+'</b><span class="av-row">'+five.map(function(id){ var t=tokById(id); return '<span class="av">'+(t?tokPreview(t):"")+"</span>"; }).join("")+'</span><span class="note">'+esc(names||"캐릭터 없음")+" · 대화 "+(nD||"기본")+(nD?"개":"")+(duoOn&&window.__TAURI__?" · 바탕화면에 나와 있어요":"")+'</span></button><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+"</button></div></div>";
+    return '<div class="box" data-pair="'+p.id+'"><div class="box-t">'+fbtn+'<input class="in" data-pf="name" value="'+esc(p.name)+'" placeholder="페어 이름" style="font-weight:700;max-width:280px"><button class="ib" data-act="pdel" title="풀기" style="margin-left:auto">'+X+'</button></div><div class="mem">'+S.tokens.map(function(t){ return '<button data-mem="'+t.id+'"'+(p.tokenIds.indexOf(t.id)>=0?' class="on"':"")+'><span class="av" style="background:'+tint(t.color,.2)+'">'+tokPreview(t)+"</span>"+esc(t.nick||t.name)+"</button>"; }).join("")+"</div>"+duo+"</div>";
   }).join("");
   if(S.tokens.length<2) return h+'<div class="box"><p class="note">페어를 묶으려면 캐릭터가 두 명 이상 있어야 해요. 지금은 '+S.tokens.length+'명이에요.</p><div class="btns" style="margin-top:10px"><button class="btn pri" data-act="new">＋ 캐릭터 추가</button></div></div></div>';
   return h+'<button class="btn" data-act="pnew">＋ 새 페어 묶기</button></div>';
@@ -788,11 +796,21 @@ app.addEventListener("click",function(e){
   if(a==="del") ask("'"+(t.nick||t.name||"이 캐릭터")+"'를 지울까요? 되돌릴 수 없어요.","지우기").then(function(ok){ if(!ok) return; var id=SEL; S.tokens=S.tokens.filter(function(z){return z.id!==id}); S.pairs.forEach(function(p){p.tokenIds=p.tokenIds.filter(function(z){return z!==id})}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="token"&&z.who.id===id); }); (S.events||[]).forEach(function(z){ if(z.who&&z.who.type==="token"&&z.who.id===id) z.who=null; if(z.star===id) z.star=null; }); if(S.settings.main===id){ S.settings.main=null; setCfg("main",null); } SEL=null; SUB="basic"; saveSoon(true); render(); toast("지웠어요"); });
   if(a==="pduo"){ var pd=pairOf(b); setCfg("duo",S.settings.duo===pd.id?"":pd.id); saveSoon(true); render(); toast(S.settings.duo?"바탕화면에 둘이 같이 나와요":"한 명만 나와요"); return; }
   if(a==="dlauto"||a==="dlvoice"){ var pz=pairOf(b), kz=a==="dlauto"?"duoAuto":"duoVoice"; pz[kz]=pz[kz]===false; saveSoon(true); render(); toast(a==="dlauto"?(pz.duoAuto?"가끔 저절로 대화해요":"저절로 대화하지 않아요 · 우클릭 [둘이 이야기하기]로는 할 수 있어요"):(pz.duoVoice?"대화할 때 말소리가 나요":"대화는 소리 없이 말풍선만 떠요")); return; }
+  if(a==="pfold"){ var pf=pairOf(b); pf.fold=!pf.fold; saveSoon(true); render(); return; }
+  if(a==="pfoldall"){ var allF=S.pairs.every(function(p){return p.fold}); S.pairs.forEach(function(p){ p.fold=!allF; }); saveSoon(true); render(); return; }
+  if(a==="dlfold"||a==="dlfoldall"){ var pz2=pairOf(b), ids3=pz2.tokenIds.filter(function(id){return tokById(id)}).slice(0,5), D3=pairDialogs(pz2,ids3)||[], F=(pz2.dlgFold||[]).slice(0,D3.length);
+    if(a==="dlfold"){ var ii2=+b.dataset.i; F[ii2]=!F[ii2]; } else { var allC=D3.every(function(c,i){return F[i]}); F=D3.map(function(){ return !allC; }); }
+    pz2.dlgFold=F.map(function(x){return !!x}); saveSoon(true); render(); return; }
+  if(a==="talkexp"){ var pe=pairOf(b), idsE=pe.tokenIds.filter(function(id){return tokById(id)}).slice(0,5), DE=pairDialogs(pe,idsE)||[]; if(!DE.length){ toast("내보낼 대화가 없어요"); return; }
+    var spk=idsE.map(function(id){ var t=tokById(id)||{}; return t.nick||t.name||""; }), fnE=((pe.name||spk.join("&")||"페어")+"-대화").replace(/[\\/:*?"<>|]/g,"_")+".ddtalk";
+    api.saveFile(fnE,JSON.stringify({format:"dday-talk",v:1,saved:new Date().toISOString(),pair:pe.name||"",speakers:spk,dialogs:DE})).then(function(ok){ if(ok) toast("대화 "+DE.length+"개를 파일로 만들었어요"); }); return; }
   if(/^(dlgadd|dlgdel|dlgdef|dladd|dldel|dlwho|dlsty|dlmo|dlgplay)$/.test(a)){ var pq=pairOf(b), ids2=pq.tokenIds.filter(function(id){return tokById(id)}).slice(0,5), D2=pairDialogs(pq,ids2)||[], i2=+b.dataset.i, j2=+b.dataset.j, c2=D2[i2];
     if(a==="dlgplay"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",{i:i2,at:Date.now()}); },300); return; }
     if(a==="dlgadd") D2.push([{w:0,t:"",s:""},{w:1,t:"",s:""}]);
     if(a==="dlgdef") D2=defDialogs();
-    if(a==="dlgdel") D2.splice(i2,1);
+    if(a==="dlgdel"){ D2.splice(i2,1); if(pq.dlgFold) pq.dlgFold.splice(i2,1); }
+    if(a==="dlgadd"&&pq.dlgFold) pq.dlgFold.length=Math.min(pq.dlgFold.length,D2.length-1);
+    if(a==="dlgdef") pq.dlgFold=[];
     if(a==="dladd"&&c2){ var lw=c2.length?c2[c2.length-1].w||0:-1; c2.push({w:(lw+1)%Math.max(2,ids2.length),t:"",s:""}); }
     if(a==="dldel"&&c2){ c2.splice(j2,1); if(!c2.length) D2.splice(i2,1); }
     if(a==="dlwho"&&c2&&c2[j2]) c2[j2].w=((c2[j2].w||0)+1)%Math.max(2,ids2.length);
@@ -987,5 +1005,16 @@ function importChar(text){
   Promise.all(jobs).then(function(){ added.forEach(function(t){ S.tokens.push(t); }); saveSoon(true); SEL=added[0].id; VIEW="char"; SUB="basic"; render();
     toast(added.length>1?"캐릭터 "+added.length+"명을 불러왔어요":(added[0].nick||added[0].name||"캐릭터")+" 캐릭터를 불러왔어요"); });
 }
+/* 대화 파일(.ddtalk) 불러오기: 지금 대화 뒤에 덧붙여요. 말하는 사람은 순서대로 맞춰요 */
+document.addEventListener("change",function(e){ if(!e.target.classList||!e.target.classList.contains("talkimp")) return; var inp=e.target, f=inp.files[0]; if(!f) return; var pid=inp.dataset.pid;
+  var fr=new FileReader(); fr.onload=function(){ inp.value=""; var d; try{ d=JSON.parse(String(fr.result)); }catch(x){ toast("대화 파일을 읽지 못했어요"); return; }
+    if(!d||d.format!=="dday-talk"||!Array.isArray(d.dialogs)){ toast("기념일 D-day 대화 파일(.ddtalk)이 아니에요"); return; }
+    var pp=S.pairs.filter(function(x){return x.id===pid})[0]; if(!pp) return; var ids4=pp.tokenIds.filter(function(id){return tokById(id)}).slice(0,5), nn=Math.max(2,ids4.length);
+    var add=d.dialogs.map(function(c){ return (Array.isArray(c)?c:[]).map(function(l){ return {w:((+l.w||0)%nn),t:String(l.t||""),s:l.s||"",m:l.m||""}; }).filter(function(l){return l.t}); }).filter(function(c){return c.length});
+    if(!add.length){ toast("파일 안에 대화가 없어요"); return; }
+    var cur=pairDialogs(pp,ids4)||[], who=(d.speakers||[]).filter(Boolean).join(" · ");
+    ask("대화 "+add.length+"개"+(who?" ("+who+")":"")+"를 지금 대화 "+cur.length+"개 뒤에 덧붙일까요?","덧붙이기").then(function(ok){ if(!ok) return;
+      pp.dialogs=cur.concat(add); delete pp.talks; pp.dlgFold=(pp.dlgFold||[]).slice(0,cur.length); saveSoon(true); render(); toast("대화 "+add.length+"개를 불러왔어요"); }); };
+  fr.readAsText(f); });
 document.addEventListener("change",function(e){ if(e.target.id!=="charimp") return; var f=e.target.files[0]; if(!f) return; var fr=new FileReader(); fr.onload=function(){ importChar(String(fr.result)); }; fr.readAsText(f); e.target.value=""; });
 })();

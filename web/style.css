@@ -700,3 +700,23 @@ body.dark .dl-row.b .dl-who{background:rgba(255,92,154,.14)}
 .icpick button .aic{width:26px;height:26px}
 .icpick button.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--accs);background:var(--accs)}
 .dl-mo.on{color:var(--acc);border-color:var(--acc);background:var(--accs)}
+/* 페어 · 대화 접기 */
+.chev{display:inline-block;transition:transform .15s;font-size:18px;line-height:1;color:var(--sub);transform:rotate(0deg)}
+.chev.open{transform:rotate(90deg)}
+.ib.pfold{margin-right:2px}
+.pfolded .box-t{margin-bottom:0}
+.pf-sum{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:none;padding:2px 0;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.pf-sum b{font-size:15px;white-space:nowrap}
+.pf-sum .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-sum .av-row{display:flex}
+.pf-sum .av-row .av{width:26px;height:26px;border-radius:50%;overflow:hidden;position:relative;flex:none;margin-left:-6px;border:2px solid var(--card,#fff);background:var(--bg);display:inline-flex;align-items:center;justify-content:center}
+.pf-sum .av-row .av:first-child{margin-left:0}
+
+.dl-tools{display:flex;align-items:center;gap:12px;margin:2px 0 8px}
+.dl-tools .sp{flex:1}
+.dl-tools .lk{font-size:12.5px;font-weight:700;color:var(--acc);background:none;border:0;padding:0;cursor:pointer}
+.dl-fold{display:flex;align-items:center;gap:6px;border:0;background:none;padding:0;cursor:pointer;font:inherit;color:inherit}
+.dlg2.folded{padding:8px 12px}
+.dlg2.folded .dlg2-h{width:100%;margin:0}
+.dlg2.folded .pv{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;color:var(--sub)}
+.dlg2.folded .cnt{font-size:12px;color:var(--faint);white-space:nowrap}
