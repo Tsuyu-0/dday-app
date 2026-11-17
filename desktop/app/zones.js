@@ -4,8 +4,9 @@
 var Z={};
 Z.ZALL=["all","캐릭터","#4f7cff","캐릭터를"];
 Z.ZONES=[["head","머리","#5b9dff","머리를"],["face","얼굴","#ff6fa3","얼굴을"],["body","몸통","#3fc58a","몸통을"],["hand","팔","#f5a524","팔을"],["foot","다리","#9b7bff","다리를"],["ear","귀","#17b8c4","귀를"],["tail","꼬리","#ff7a45","꼬리를"]];
-Z.MOTIONS=[["nod","끄덕"],["tilt","까딱까딱"],["hop","통통"],["shake","도리도리"],["squash","찌그러짐"],["wobble","흔들"],["none","가만히"]];
-Z.FX=[["none","없음"],["heart","하트"],["star","별"],["sparkle","반짝"],["sweat","땀"],["note","음표"],["q","물음표"],["anger","화남"]];
+Z.MOTIONS=[["nod","끄덕"],["tilt","까딱까딱"],["hop","통통"],["bounce","통통통"],["jump","펄쩍"],["shake","도리도리"],["squash","찌그러짐"],["wobble","흔들"],["dance","씰룩씰룩"],["spin","빙글"],["shy","움찔"],["surprise","깜짝"],["none","가만히"]];
+Z.MDUR={tilt:1250,bounce:1000,dance:1100,spin:800,jump:750,shy:800,surprise:700};
+Z.FX=[["none","없음"],["heart","하트"],["hearts","하트 뿅뿅"],["star","별"],["sparkle","반짝"],["flower","꽃"],["note","음표"],["excl","느낌표"],["q","물음표"],["sweat","땀"],["tear","눈물"],["zzz","쿨쿨"],["anger","화남"]];
 Z.FACES=[["head1","평소"],["head2","얼굴 2"],["head3","얼굴 3"],["head4","얼굴 4"]];
 Z.SOUNDS=[["none","없음"],["click","딸깍"],["key","키보드"],["wrap","뽁뽁이"],["pencil","연필"],["page","책장"],["kalimba","칼림바"],["xylo","실로폰"],["glass","유리 딩"],["harp","하프"],["music","오르골"],["sparkle","별가루"],["custom","내 소리"]];
 Z.SOUND_OLD={tok:"click",pop:"wrap",bubble:"music",squeak:"sparkle",chime:"glass",pen:"pencil",stamp:"key",sticker:"wrap",bell:"glass"};
@@ -96,16 +97,31 @@ var SVG={
   sweat:'<svg viewBox="0 0 24 24"><path d="M12 2.5S5.5 10.4 5.5 15a6.5 6.5 0 0013 0C18.5 10.4 12 2.5 12 2.5z" fill="#6fb4ff"/><ellipse cx="9.6" cy="14.6" rx="1.4" ry="2.4" fill="#fff" opacity=".7"/></svg>',
   note:'<svg viewBox="0 0 24 24"><path d="M9 18.5a3 3 0 11-2-2.8V4l12-2v13.5a3 3 0 11-2-2.8V5.4L9 6.8z" fill="#a98bff"/></svg>',
   q:'<svg viewBox="0 0 24 24"><text x="12" y="19" text-anchor="middle" font-size="20" font-weight="800" font-family="sans-serif" fill="#ffb03a" stroke="#fff" stroke-width="1.2" paint-order="stroke">?</text></svg>',
+  flower:'<svg viewBox="0 0 24 24"><g fill="#ffb3d0"><circle cx="12" cy="6.5" r="3.6"/><circle cx="17.4" cy="10.4" r="3.6"/><circle cx="15.4" cy="16.6" r="3.6"/><circle cx="8.6" cy="16.6" r="3.6"/><circle cx="6.6" cy="10.4" r="3.6"/></g><circle cx="12" cy="12" r="2.8" fill="#ffd45c"/></svg>',
+  excl:'<svg viewBox="0 0 24 24"><text x="12" y="20" text-anchor="middle" font-size="21" font-weight="900" font-family="sans-serif" fill="#ff6b6b" stroke="#fff" stroke-width="1.4" paint-order="stroke">!</text></svg>',
+  tear:'<svg viewBox="0 0 24 24"><path d="M12 3s-5 6.2-5 10a5 5 0 0010 0c0-3.8-5-10-5-10z" fill="#9fd0ff"/><ellipse cx="10.3" cy="12.8" rx="1.1" ry="1.9" fill="#fff" opacity=".8"/></svg>',
+  zzz:'<svg viewBox="0 0 24 24"><text x="4" y="21" font-size="12" font-weight="900" font-family="sans-serif" fill="#8a9bff" stroke="#fff" stroke-width="1" paint-order="stroke">Z</text><text x="11" y="13" font-size="9" font-weight="900" font-family="sans-serif" fill="#8a9bff" stroke="#fff" stroke-width="1" paint-order="stroke">z</text><text x="17" y="7" font-size="7" font-weight="900" font-family="sans-serif" fill="#8a9bff" stroke="#fff" stroke-width="1" paint-order="stroke">z</text></svg>',
   anger:'<svg viewBox="0 0 24 24"><path d="M9 3v4.5C9 8.3 8.3 9 7.5 9H3M15 3v4.5c0 .8.7 1.5 1.5 1.5H21M9 21v-4.5c0-.8-.7-1.5-1.5-1.5H3M15 21v-4.5c0-.8.7-1.5 1.5-1.5H21" stroke="#ff4d4f" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>'
 };
 Z.fxSVG=SVG;
 Z.spawn=function(host,x,y,kind,size){
+  if(kind==="hearts"){ Z.hearts(host,x,y,size,5); return; }
   if(!kind||kind==="none"||!SVG[kind]) return;
   Array.prototype.forEach.call(host.querySelectorAll(":scope > .fxp"),function(e){ e.remove(); });
   var s=Math.max(18,Math.round((size||160)*.16));
   var el=document.createElement("div"); el.className="fxp"; el.innerHTML=SVG[kind];
   el.style.cssText="left:"+(x-s/2)+"px;top:"+(y-s/2)+"px;width:"+s+"px;height:"+s+"px;--r:"+((Math.random()*2-1)*14).toFixed(0)+"deg";
   host.appendChild(el); setTimeout(function(){ el.remove(); },800);
+};
+/* 하트 뾰뾰뾰뿅: 작은 하트가 여러 개 흩어지며 올라가요 (쓰다듬기 · 하트 뿅뿅) */
+Z.hearts=function(host,x,y,size,n){
+  var s0=Math.max(12,Math.round((size||160)*.1)), cols=["#ff7fa8","#ffb3d0","#ff5c8a","#ffc6dc"];
+  for(var i=0;i<(n||1);i++) (function(i){ setTimeout(function(){
+    var s=Math.round(s0*(.7+Math.random()*.6)), el=document.createElement("div"); el.className="fxh";
+    el.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 21s-8.5-5.3-8.5-11.4A4.4 4.4 0 0112 7.5a4.4 4.4 0 018.5 2.1C20.5 15.7 12 21 12 21z" fill="'+cols[Math.floor(Math.random()*cols.length)]+'" stroke="#fff" stroke-width="1.6"/></svg>';
+    el.style.cssText="left:"+(x-s/2+(Math.random()-.5)*s*1.6)+"px;top:"+(y-s/2+(Math.random()-.5)*s*.6)+"px;width:"+s+"px;height:"+s+"px;--dx:"+((Math.random()-.5)*s*2.4).toFixed(0)+"px;--r:"+((Math.random()*2-1)*22).toFixed(0)+"deg";
+    host.appendChild(el); setTimeout(function(){ el.remove(); },1100);
+  },i*90); })(i);
 };
 /* 부위 대사 + 공통 대사를 함께 섞어서 */
 function mixLines(zl,cl){ zl=(zl||[]).filter(Boolean); cl=(cl||[]).filter(function(s){ return s&&zl.indexOf(s)<0; });
@@ -118,8 +134,14 @@ Z.react=function(stage,t,zone){
   Z.MOTIONS.forEach(function(m){ stage.classList.remove("m-"+m[0]); });
   void stage.offsetWidth;
   if(z.motion!=="none") stage.classList.add("m-"+z.motion);
-  clearTimeout(stage._zt); stage._zt=setTimeout(function(){ stage.removeAttribute("data-face"); stage.removeAttribute("data-zone"); Z.MOTIONS.forEach(function(m){ stage.classList.remove("m-"+m[0]); }); },z.motion==="tilt"?1250:700);
-  return {zone:zone,fx:z.fx,sound:z.sound,soundSrc:z.soundSrc,bubble:z.bubble,lines:mixLines(z.lines,t.lines)};
+  clearTimeout(stage._zt); stage._zt=setTimeout(function(){ stage.removeAttribute("data-face"); stage.removeAttribute("data-zone"); Z.MOTIONS.forEach(function(m){ stage.classList.remove("m-"+m[0]); }); },(Z.MDUR&&Z.MDUR[z.motion])||700);
+  return {zone:zone,fx:t.fxOff?"none":z.fx,sound:z.sound,soundSrc:z.soundSrc,bubble:z.bubble,lines:mixLines(z.lines,t.lines)};
+};
+/* 몸짓만 (상호작용용) */
+Z.move=function(stage,motion){
+  if(!motion||motion==="none") return;
+  Z.MOTIONS.forEach(function(m){ stage.classList.remove("m-"+m[0]); }); void stage.offsetWidth; stage.classList.add("m-"+motion);
+  clearTimeout(stage._mt); stage._mt=setTimeout(function(){ stage.classList.remove("m-"+motion); },(Z.MDUR&&Z.MDUR[motion])||700);
 };
 /* 말풍선 (웹툰 느낌) */
 Z.parseLine=function(s,def){

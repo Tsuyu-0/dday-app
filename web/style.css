@@ -699,3 +699,4 @@ body.dark .dl-row.b .dl-who{background:rgba(255,92,154,.14)}
 .icpick button{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line2);background:var(--card,#fff);display:flex;align-items:center;justify-content:center;padding:0}
 .icpick button .aic{width:26px;height:26px}
 .icpick button.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--accs);background:var(--accs)}
+.dl-mo.on{color:var(--acc);border-color:var(--acc);background:var(--accs)}

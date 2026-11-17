@@ -73,6 +73,8 @@
     onNav: on("nav"),
     onPetPoke: on("pet:poke"),
     onPetLine: on("pet:line"),
+    onPetAct: on("pet:act"),
+    petPetted: function () { send("pet:petted"); },
     petTapped: function () { send("pet:tap"); },
     petIgnore: function (v) { if (!dragFrom) setIgnore(v); },
     petDragStart: function () { setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; }); },

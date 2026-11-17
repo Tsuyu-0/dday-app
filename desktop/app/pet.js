@@ -95,7 +95,36 @@ window.addEventListener("mousemove",function(e){
   }
   if(e.target.closest&&e.target.closest(".bb-help")){ if(!over){ over=true; api.petIgnore(false); } return; }
   setOver(hit(e));
+  if(over) rubTrack(e);
 });
+
+/* 쓰다듬기: 그림 위에서 마우스를 좌우로 슥슥 문지르면 하트가 뿅뿅 */
+var rub={x:null,dir:0,flips:[],last:0,on:false,endT:null,heartT:0};
+function rubTrack(e){
+  if(!T||T.petOff) return;
+  var now=Date.now(), x=e.clientX;
+  if(rub.x==null||now-rub.last>350){ rub.x=x; rub.dir=0; rub.flips=[]; rub.last=now; return; }
+  var dx=x-rub.x; rub.last=now;
+  if(Math.abs(dx)<3) return;
+  var d=dx>0?1:-1;
+  if(rub.dir&&d!==rub.dir) rub.flips.push(now);
+  rub.dir=d; rub.x=x;
+  rub.flips=rub.flips.filter(function(t){ return now-t<1000; });
+  if(rub.flips.length>=3){ petting(e); }
+}
+function petting(e){
+  var now=Date.now(), size=stage.offsetWidth, p=norm(e);
+  if(!rub.on){ rub.on=true; stage.classList.add("m-pet"); var c=T._cfg||{}; if(!c.mute) Z.sound("sparkle",c.volume*.6); }
+  if(now-rub.heartT>140){ rub.heartT=now; Z.hearts(stage,p[2],Math.min(p[3],size*.45),size,1); }
+  clearTimeout(rub.endT);
+  rub.endT=setTimeout(function(){
+    rub.on=false; stage.classList.remove("m-pet"); rub.flips=[];
+    Z.hearts(stage,size/2,size*.3,size,4);
+    var pl=(T.petLines||[]).filter(Boolean); if(!pl.length) pl=["헤헤, 좋다~","간지러워!","더 쓰다듬어 줘","기분 좋아…"];
+    say(pick(pl,"pet"),false);
+    if(api.petPetted) api.petPetted();
+  },450);
+}
 window.addEventListener("mousedown",function(e){ if(e.target.closest&&e.target.closest(".bb-help")) return; if(e.button!==0||!over) return; down={x:e.screenX,y:e.screenY,e:e}; dragging=false; });
 window.addEventListener("mouseup",function(e){
   if(e.button!==0||!down) return;
@@ -107,10 +136,17 @@ window.addEventListener("mouseleave",function(){ if(!down) setOver(false); });
 window.addEventListener("contextmenu",function(e){ e.preventDefault(); if(over) api.petMenu(); });
 
 api.onPetToken(render);
+/* 같이 떠 있는 친구들과 상호작용: 몸짓 · 바라보기 */
+if(api.onPetAct) api.onPetAct(function(d){
+  if(!T||!d) return; var size=stage.offsetWidth;
+  if(d.lean!=null){ stage.style.transformOrigin="50% 100%"; stage.style.transition="rotate .45s ease"; stage.style.rotate=(d.lean*5)+"deg"; clearTimeout(stage._faceT); if(d.lean) stage._faceT=setTimeout(function(){ stage.style.rotate="0deg"; },d.hold||5000); }
+  if(d.motion) Z.move(stage,d.motion);
+  if(d.fx) Z.spawn(stage,size*(d.side>0?.75:d.side<0?.25:.5),size*.28,d.fx,size);
+});
 api.onPetPoke(function(){ var zs=Z.zonesFor(T||{}); react(zs[Math.floor(Math.random()*zs.length)]); });
 api.onPetSay(function(t){ if(!T) return; Z.react(stage,T,"head"); var c=T._cfg||{}; if(!c.mute) Z.sound("bell",c.volume); if(t&&typeof t==="object") helpSay(t.line,t.view); else helpSay(t,"events"); });
 /* 페어로 같이 떠 있을 때: 옆 캐릭터와 주고받는 대사 */
-if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); });
+if(api.onPetLine) api.onPetLine(function(d){ if(!T||!d) return; clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()}); if(d.motion) Z.move(stage,d.motion); else Z.react(stage,T,"head"); say(d.text,false,"speech",d.ms,!!d.quiet); });
 api.petToken().then(render);
 idleLoop();
 })();

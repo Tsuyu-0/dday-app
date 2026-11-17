@@ -106,8 +106,8 @@
 
   /* ---------- 바탕화면 캐릭터 (한 명, 페어를 같이 띄우면 두 명) ---------- */
   var PAD_X = 84, PAD_TOP = 112, lastDay = "";
-  var LABELS = ["pet", "pet2"], FOOT = { pet: "foot", pet2: "foot2" };
-  var P = { pet: { win: null, pick: null, size: null, opening: false }, pet2: { win: null, pick: null, size: null, opening: false } };
+  var LABELS = ["pet", "pet2", "pet3", "pet4", "pet5"], FOOT = { pet: "foot", pet2: "foot2", pet3: "foot3", pet4: "foot4", pet5: "foot5" };
+  var P = {}; LABELS.forEach(function (l) { P[l] = { win: null, pick: null, size: null, opening: false }; });
   var pet = null; // 첫 번째 창 (알림 말풍선용)
   function petBounds(t) {
     var size = (t.desk && t.desk.size) || 160, up = Math.max(0, ((t.bubblePos && t.bubblePos.y) || 0) / 100 * size);
@@ -120,11 +120,13 @@
   }
   function boundsAtFoot(t, label) {
     var b = petBounds(t), f = S.settings[FOOT[label]], x, y;
-    if (label === "pet2" && !(f && typeof f.x === "number")) {
-      // 두 번째는 첫 번째 왼쪽 옆에 나란히
-      var t1 = P.pet.pick && tok(P.pet.pick.id), f1 = S.settings.foot, b1 = t1 ? petBounds(t1) : b;
-      var fx = f1 && typeof f1.x === "number" ? f1.x : defaultPos(t1 || t).x + b1.width / 2, fy = f1 && typeof f1.y === "number" ? f1.y : defaultPos(t1 || t).y + b1.height;
-      f = { x: fx - (b1.size + b.size) / 2 - 16, y: fy };
+    var li = LABELS.indexOf(label);
+    if (li > 0 && !(f && typeof f.x === "number")) {
+      // 두 번째부터는 앞 사람 왼쪽 옆에 나란히
+      var prev = LABELS[li - 1], tp = P[prev].pick && tok(P[prev].pick.id), bp = tp ? petBounds(tp) : b;
+      var fp = S.settings[FOOT[prev]], base = tp ? (fp && typeof fp.x === "number" ? fp : null) : null;
+      if (!base) { var bb = tp ? boundsAtFoot(tp, prev) : null; base = bb ? { x: bb.x + bb.width / 2, y: bb.y + bb.height } : { x: defaultPos(t).x + b.width / 2, y: defaultPos(t).y + b.height }; }
+      f = { x: base.x - (bp.size + b.size) / 2 - 16, y: base.y };
     }
     if (f && typeof f.x === "number") { x = Math.round(f.x - b.width / 2); y = Math.round(f.y - b.height); }
     else { var p = defaultPos(t); x = p.x; y = p.y; }
@@ -160,16 +162,20 @@
   function duoPair() {
     var id = S.settings.duo; if (!id) return null;
     var p = (S.pairs || []).filter(function (x) { return x.id === id; })[0]; if (!p) return null;
-    var ids = (p.tokenIds || []).filter(function (x) { return tok(x); }).slice(0, 2);
-    return ids.length === 2 ? { p: p, ids: ids } : null;
+    var ids = (p.tokenIds || []).filter(function (x) { return tok(x); }).slice(0, 5);
+    return ids.length >= 2 ? { p: p, ids: ids } : null;
   }
   function picks() {
-    if (S.settings.allHidden) return [null, null];
-    var one = A.pick(S); if (!one) return [null, null];
-    var d = duoPair(); if (!d) return [one, null];
-    if (d.ids.indexOf(one.id) >= 0) return [one, { id: d.ids[0] === one.id ? d.ids[1] : d.ids[0], reason: "duo" }];
-    if (one.reason === "main") return [{ id: d.ids[0], reason: "duo" }, { id: d.ids[1], reason: "duo" }];
-    return [one, null];
+    var out = LABELS.map(function () { return null; });
+    if (S.settings.allHidden) return out;
+    var one = A.pick(S); if (!one) return out;
+    var d = duoPair(); out[0] = one; if (!d) return out;
+    var list;
+    if (d.ids.indexOf(one.id) >= 0) list = [one].concat(d.ids.filter(function (x) { return x !== one.id; }).map(function (x) { return { id: x, reason: "duo" }; }));
+    else if (one.reason === "main") list = d.ids.map(function (x) { return { id: x, reason: "duo" }; });
+    else return out;
+    list.forEach(function (x, i) { out[i] = x; });
+    return out;
   }
   function syncPets() {
     var pk = picks();
@@ -194,7 +200,7 @@
   var DEF_DIALOGS = [[[0, "오늘 뭐 했어?"], [1, "너 기다렸지!"]], [[0, "배고프지 않아?"], [1, "방금 그 말 기다렸어"]], [[1, "나 오늘 좀 멋있지?"], [0, "...응, 쪼끔"]], [[0, "{B}!"], [1, "왜~"], [0, "그냥 불러 봤어"]], [[1, "졸려..."], [0, "조금만 더 버티자"]], [[0, "여기 화면 넓다"], [1, "같이 있으니까 좁은데?"]], [[0, "두근두근", "sfx"], [1, "무슨 소리야?"], [0, "아, 아무것도 아니야!"]], [[1, "우리 산책 갈래?"], [0, "바탕화면 밖으로는 못 나가잖아"], [1, "그럼 여기서 한 바퀴!"]], [[0, "오늘 날씨 어때?"], [1, "너랑 있어서 맑음"]], [[1, "쾅!", "sfx"], [0, "깜짝이야!", "shout"], [1, "헤헤 놀랐지"]], [[0, "일 열심히 하네"], [1, "우리도 응원하자"], [0, "화이팅!"]], [[1, "심심해~"], [0, "그럼 나랑 놀자"]]];
   function nameOf(id) { var t = tok(id); return t ? (t.nick || t.name || "") : ""; }
   var PREFIX = { sfx: "*", shout: "!", thought: "(" };
-  function line(w, t, sty, nA, nB) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t) return null; return { w: w ? 1 : 0, t: PREFIX[sty] ? PREFIX[sty] + t + (sty === "thought" ? ")" : "") : t }; }
+  function line(w, t, sty, nA, nB, m) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t) return null; return { w: w || 0, t: PREFIX[sty] ? PREFIX[sty] + t + (sty === "thought" ? ")" : "") : t, m: m || "" }; }
   /* 예전 글자 방식(이름: 대사) */
   function parseTalks(text, ids, nA, nB) {
     var names = ids.map(function (id) { var t = tok(id) || {}; return [t.nick || "", t.name || ""]; });
@@ -211,7 +217,7 @@
   }
   function talksFor(d) {
     var nA = nameOf(d.ids[0]), nB = nameOf(d.ids[1]), list;
-    var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? line(l[0], l[1], l[2], nA, nB) : line(l.w, l.t, l.s, nA, nB); }).filter(Boolean); };
+    var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? line(l[0], l[1], l[2], nA, nB) : line(l.w, l.t, l.s, nA, nB, l.m); }).filter(function (l) { return l && l.w < d.ids.length; }); };
     if (Array.isArray(d.p.dialogs) && d.p.dialogs.length) list = d.p.dialogs.map(conv);
     else if (d.p.talks && d.p.talks.trim()) list = parseTalks(d.p.talks, d.ids, nA, nB);
     else list = DEF_DIALOGS.map(conv);
@@ -228,28 +234,69 @@
     return list;
   }
   var talking = false, lastTalk = -1, talkGen = 0;
+  /* 지금 떠 있는 친구들: 캐릭터 id → 창 이름 */
+  function shown() { var m = {}; LABELS.forEach(function (l) { if (P[l].win && P[l].pick) m[P[l].pick.id] = l; }); return m; }
+  function posAll() {
+    var m = shown(), ls = Object.keys(m).map(function (id) { return m[id]; });
+    return Promise.all(ls.map(function (l) { return boundsOf(P[l].win).then(function (b) { return [l, b.x + b.width / 2]; }).catch(function () { return [l, 0]; }); })).then(function (r) { var o = {}; r.forEach(function (x) { o[x[0]] = x[1]; }); return o; });
+  }
+  /* 다가가기: 말하는 친구 창을 옆 친구 쪽으로 살짝 갔다가 돌아와요 */
+  function approach(label, toward) {
+    var w = P[label].win; if (!w) return;
+    boundsOf(w).then(function (b) {
+      var x0 = b.x, dist = 26 * (toward >= 0 ? 1 : -1), t0 = Date.now();
+      var iv = setInterval(function () {
+        var t = (Date.now() - t0) / 700; if (t >= 1) { clearInterval(iv); w.setPosition(new LPos(x0, b.y)).catch(function () {}); return; }
+        var e = Math.sin(t * Math.PI); w.setPosition(new LPos(Math.round(x0 + dist * e), b.y)).catch(function () {});
+      }, 30);
+    });
+  }
   function playTalk(only) {
-    var d = duoPair(); if (!d || !P.pet.win || !P.pet2.win || !P.pet.pick || !P.pet2.pick) return false;
+    var d = duoPair(), lab = shown();
+    if (!d || Object.keys(lab).length < 2) return false;
     if (talking && only == null) return false;
-    var list = talksFor(d); if (!list.length) return false;
+    var list = talksFor(d).map(function (c) { return c.filter(function (l) { return lab[d.ids[l.w]]; }); }).filter(function (c) { return c.length; });
+    var base = list.length; if (!list.length) return false;
     var i = Math.floor(Math.random() * list.length); if (list.length > 1 && i === lastTalk) i = (i + 1) % list.length;
-    if (only != null && only < list.base) i = only; lastTalk = i;
+    if (only != null && only < base) i = only; lastTalk = i;
     talkGen++; var gen = talkGen;
-    var conv = list[i], lab = {}; lab[P.pet.pick.id] = "pet"; lab[P.pet2.pick.id] = "pet2";
+    var conv = list[i];
     talking = true;
-    var step = function (k) {
-      if (gen !== talkGen) return;
-      if (k >= conv.length || !P.pet.win || !P.pet2.win) { talking = false; return; }
-      var ln = conv[k], label = lab[d.ids[ln.w]] || (ln.w ? "pet2" : "pet"), ms = Math.min(4200, Math.max(1700, 900 + ln.t.length * 90));
-      sendTo(label, "pet:line", { text: ln.t, ms: ms, quiet: d.p.duoVoice === false });
-      setTimeout(function () { step(k + 1); }, ms + 350);
-    };
-    step(0);
+    posAll().then(function (px) {
+      var step = function (k) {
+        if (gen !== talkGen) return;
+        if (k >= conv.length) { talking = false; Object.keys(px).forEach(function (l) { sendTo(l, "pet:act", { lean: 0 }); }); return; }
+        var ln = conv[k], label = lab[d.ids[ln.w]], ms = Math.min(4200, Math.max(1700, 900 + ln.t.length * 90));
+        if (!label || !P[label].win) { step(k + 1); return; }
+        // 듣는 친구들은 말하는 쪽으로 몸을 살짝 기울여요
+        Object.keys(px).forEach(function (l) { if (l !== label) sendTo(l, "pet:act", { lean: px[label] > px[l] ? 1 : -1, hold: ms + 600 }); });
+        var others = Object.keys(px).filter(function (l) { return l !== label; }), near = others.sort(function (p1, p2) { return Math.abs(px[p1] - px[label]) - Math.abs(px[p2] - px[label]); })[0];
+        var mo = ln.m === "approach" ? "hop" : ln.m;
+        if (ln.m === "approach" && near) approach(label, px[near] - px[label]);
+        sendTo(label, "pet:line", { text: ln.t, ms: ms, quiet: d.p.duoVoice === false, motion: mo });
+        setTimeout(function () { step(k + 1); }, ms + 350);
+      };
+      step(0);
+    });
     return true;
   }
   // 가끔 저절로 (평균 2~3분에 한 번)
   setInterval(function () { var d = S && duoPair(); if (d && !S.settings.allHidden && d.p.duoAuto !== false && Math.random() < 0.12) playTalk(); }, 20000);
-  handlers["pet:tap"] = function () { var d = duoPair(); if (d && d.p.duoAuto !== false && Math.random() < 0.3) setTimeout(playTalk, 1700); };
+  /* 누르면 · 쓰다듬으면 옆 친구들도 반응 */
+  function friendsReact(from, kind) {
+    var d = duoPair(), lab = shown(); if (!d || Object.keys(lab).length < 2) return;
+    posAll().then(function (px) {
+      Object.keys(px).forEach(function (l) {
+        if (l === from || Math.random() > (kind === "pet" ? 0.6 : 0.35)) return;
+        var dir = px[from] > px[l] ? 1 : -1;
+        setTimeout(function () {
+          sendTo(l, "pet:act", kind === "pet" ? { lean: dir, hold: 1800, motion: Math.random() < .5 ? "shy" : "surprise", fx: Math.random() < .5 ? "sweat" : "q", side: dir } : { lean: dir, hold: 1500, motion: "hop", fx: "heart", side: dir });
+        }, 250 + Math.random() * 400);
+      });
+    });
+  }
+  handlers["pet:tap"] = function (from) { var d = duoPair(); if (!d) return; friendsReact(from || "pet", "tap"); if (d.p.duoAuto !== false && Math.random() < 0.3) setTimeout(playTalk, 1700); };
+  handlers["pet:petted"] = function (from) { if (duoPair()) friendsReact(from || "pet", "pet"); };
 
   handlers["pet:token"] = function (from) { return petData(from || "pet"); };
   handlers["pet:dragend"] = function (from) { saveFoot(from || "pet"); };
@@ -262,21 +309,21 @@
     var M = T.menu.Menu, items = [
       { text: (t.nick || t.name) + " 쓰다듬기", action: function () { sendTo(label, "pet:poke"); } },
     ];
-    if (d && P.pet2.win) items.push({ text: "둘이 이야기하기", action: function () { playTalk(); } });
+    if (d && Object.keys(shown()).length > 1) items.push({ text: "같이 이야기하기", action: function () { playTalk(); } });
     items.push(
       { text: "관리 창에서 고치기", action: function () { showManager().then(function () { setTimeout(function () { sendTo("manager", "edit", t.id); }, 300); }); } },
-      { text: label === "pet2" ? "옆 캐릭터 바꾸기 (페어 화면에서)" : "다른 캐릭터로 바꾸기", items: label === "pet2" ? [{ text: "페어 화면 열기", action: function () { showManager().then(function () { setTimeout(function () { sendTo("manager", "nav", "pair"); }, 300); }); } }] : S.tokens.map(function (x) { return { text: (x.nick || x.name || "이름 없음") + (x.id === S.settings.main ? "  (기본)" : ""), checked: x.id === o.pick.id, action: function () { S.settings.main = x.id; redo(); } }; }) }
+      { text: label !== "pet" ? "같이 나온 친구 바꾸기 (페어 화면에서)" : "다른 캐릭터로 바꾸기", items: label !== "pet" ? [{ text: "페어 화면 열기", action: function () { showManager().then(function () { setTimeout(function () { sendTo("manager", "nav", "pair"); }, 300); }); } }] : S.tokens.map(function (x) { return { text: (x.nick || x.name || "이름 없음") + (x.id === S.settings.main ? "  (기본)" : ""), checked: x.id === o.pick.id, action: function () { S.settings.main = x.id; redo(); } }; }) }
     );
     if (o.pick.anniv) items.push({ text: "오늘: " + o.pick.anniv.title + " (" + A.ddayText(o.pick.n) + ")", enabled: false });
     if (o.pick.event) items.push({ text: "오늘 일정: " + o.pick.event.title + (o.pick.event.time ? " " + o.pick.event.time : ""), enabled: false });
     items.push(
       { item: "Separator" },
       { text: "크기", items: [[120, "120px"], [160, "160px (기본)"], [240, "240px"], [320, "320px"]].map(function (x) { return { text: x[1], checked: size === x[0], action: function () { t.desk.size = x[0]; redo(); } }; }) },
-      { text: label === "pet2" ? "옆자리로 돌려보내기" : "오른쪽 아래로 돌려보내기", action: function () { S.settings[FOOT[label]] = null; if (label === "pet") S.settings.foot2 = null; LABELS.forEach(function (l) { var oo = P[l], tt = oo.pick && tok(oo.pick.id); if (oo.win && tt && (l === label || label === "pet")) setBounds(oo.win, boundsAtFoot(tt, l)).then(function () { saveFoot(l); }); }); } },
+      { text: label !== "pet" ? "옆자리로 돌려보내기" : "오른쪽 아래로 돌려보내기", action: function () { S.settings[FOOT[label]] = null; if (label === "pet") LABELS.forEach(function (l) { if (l !== "pet") S.settings[FOOT[l]] = null; }); LABELS.forEach(function (l) { var oo = P[l], tt = oo.pick && tok(oo.pick.id); if (oo.win && tt && (l === label || label === "pet")) setBounds(oo.win, boundsAtFoot(tt, l)).then(function () { saveFoot(l); }); }); } },
       { text: "위치 잠금", checked: !!t.desk.lock, action: function () { t.desk.lock = !t.desk.lock; redo(); } },
       { text: "좌우 반전", checked: !!t.desk.flip, action: function () { t.desk.flip = !t.desk.flip; redo(); } }
     );
-    if (d) items.push({ text: "둘이 같이 띄우기 끄기", action: function () { S.settings.duo = ""; redo(); } });
+    if (d) items.push({ text: "페어 같이 띄우기 끄기", action: function () { S.settings.duo = ""; redo(); } });
     items.push(
       { item: "Separator" },
       { text: "관리 창 열기", action: function () { showManager(); } },
