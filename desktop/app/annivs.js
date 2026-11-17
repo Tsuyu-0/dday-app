@@ -82,5 +82,16 @@ A.pick=function(S,now){
   return {id:main,reason:"main"};
 };
 A.defaultLine=function(S,a,n){ var who=A.whoName(S,a.who); if(n.days===0) return "오늘은 "+(a.who&&a.who.type==="pair"?"우리 ":"")+(n.label===a.title?a.title:a.title+" "+n.label)+"이야!"; return a.title+"까지 "+n.days+"일 남았어"; };
+/* 미리 알려주기: 기념일마다 "며칠 전부터" (기본 7일, 0이면 안 알려줌) */
+A.TELL=[[0,"안 알려줘요"],[1,"하루 전"],[3,"3일 전"],[7,"일주일 전"],[14,"2주 전"],[30,"한 달 전"]];
+A.tellOf=function(a){ return typeof a.tell==="number"?a.tell:7; };
+A.soonLine=function(S,a,n){ var c=String(a.tellLine||"").trim();
+  if(c) return c.replace(/\{n\}|\{N\}|\{일\}/g,String(n.days)).replace(/\{제목\}|\{title\}/g,a.title);
+  var us=a.who&&a.who.type==="pair"?"우리 ":"";
+  return n.days===1?"내일이 "+us+a.title+"이야!":us+a.title+"까지 "+n.days+"일 남았어!"; };
+/* 이 캐릭터가 알려줄 기념일. shown: 지금 화면에 나와 있는 캐릭터 id들 (페어 기념일은 한 명만 말해요) */
+A.tellFor=function(S,tid,shown){ return A.upcoming(S).filter(function(x){ var a=x.a, d=x.n.days; if(!(d>0&&d<=A.tellOf(a))||!A.involves(S,a,tid)) return false;
+    if(a.who.type!=="pair"||!shown) return true; var st=A.starOf(S,a); if(shown.indexOf(st)>=0) return st===tid;
+    var first=shown.filter(function(id){ return A.involves(S,a,id); })[0]; return first===tid; }); };
 if(typeof module!=="undefined"&&module.exports) module.exports=A; else root.Annivs=A;
 })(this);

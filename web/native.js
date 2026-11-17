@@ -79,7 +79,10 @@
     Object.keys(t.zones || {}).forEach(function (k) { ((t.zones[k] || {}).lines || []).forEach(function (x) { out.push(clean(x)); }); });
     (t.idleLines || []).forEach(function (x) { out.push(clean(x)); });
     var greet = "";
-    if (first && first.n) { var a = first.a, n = first.n; var al = (a.lines || []).filter(Boolean); greet = n.days === 0 && al.length ? clean(al[0]) : AN.defaultLine(S, a, n); out.push(AN.defaultLine(S, a, n)); }
+    if (first && first.n && first.n.days === 0) { var a = first.a, n = first.n; var al = (a.lines || []).filter(Boolean); greet = al.length ? clean(al[0]) : AN.defaultLine(S, a, n); out.push(AN.defaultLine(S, a, n)); }
+    /* 미리 알려주기: 정한 날부터 "며칠 남았어"로 먼저 인사하고, 가끔 혼잣말로도 말해요 */
+    var soon = AN.tellFor ? AN.tellFor(S, t.id, [t.id]) : [];
+    soon.slice(0, 3).forEach(function (x, i) { var l = AN.soonLine(S, x.a, x.n); if (!greet && i === 0) greet = l; out.push(l); out.push(l); });
     var st = S.settings || {};
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
       voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6 };

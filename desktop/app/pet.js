@@ -36,6 +36,21 @@ function seenKey(k){ return "dd-seen|"+k; }
 function isSeen(k){ try{ return !!(k&&localStorage.getItem(seenKey(k))); }catch(e){ return false; } }
 function markSeen(k){ if(!k) return; try{ localStorage.setItem(seenKey(k),String(Date.now()));
   for(var i=localStorage.length-1;i>=0;i--){ var kk=localStorage.key(i); if(kk&&kk.indexOf("dd-seen|")===0&&Date.now()-(+localStorage.getItem(kk)||0)>40*864e5) localStorage.removeItem(kk); } }catch(e){} }
+/* 기념일 미리 알려주기: 하루에 한 번, 캐릭터가 자기 말풍선으로 "며칠 남았어" (안 누르고 넘기면 25분 뒤 다시) */
+function tellSoon(){
+  if(!T){ setTimeout(tellSoon,3000); return; }
+  var cfg=T._cfg||{}, x=(cfg.soon||[]).filter(function(y){ return !isSeen("s|"+(y.id||y.title)+"|"+y.days+"|"+(cfg.day||"")); })[0];
+  if(!x) return; if(document.querySelector("body > .bub")||dragging){ clearTimeout(tellSoon._t); tellSoon._t=setTimeout(tellSoon,9000); return; }
+  var key="s|"+(x.id||x.title)+"|"+x.days+"|"+(cfg.day||""), text=x.text||(x.title+"까지 "+x.days+"일 남았어!");
+  clearTimeout(document.body._sayT);
+  var sz=stage.offsetHeight, bp=Z.bubPos(T,sz), sty=(T.bubble&&T.bubble!=="sfx"&&T.bubble!=="help")?T.bubble:"speech";
+  var el=Z.bubble(document.body,text,sty,{bottom:8+sz-bp.fromTop+18+bp.dy,dx:bp.dx*(T.desk&&T.desk.flip?-1:1),clamp:true,maxWidth:Math.max(160,window.innerWidth-50),
+    buttons:[["기념일 보기","anniv"],["알겠어","ok"]],onAct:function(a){ markSeen(key); if(a!=="ok") api.petOpen(a); setOver(false); }});
+  var vc=T.babble&&T.babble!=="none"&&!cfg.mute; if(vc&&Z.typeOut){ try{ Z.typeOut(el.querySelector(".bt"),text,T.babble,cfg.voiceVol==null?.6:cfg.voiceVol,sty,{pitch:T.babblePitch||0,speed:T.babbleSpeed||1}); }catch(e){} }
+  try{ Z.move&&Z.move(stage,"hop"); }catch(e){}
+  setTimeout(function(){ if(el.parentNode) el.remove(); },15000);
+}
+setTimeout(tellSoon,6000); setInterval(tellSoon,25*60000);
 function helpSay(text,view,key){
   if(!T||!text) return;
   clearTimeout(document.body._sayT); Array.prototype.forEach.call(document.querySelectorAll("body > .bub"),function(x){x.remove()});
@@ -67,7 +82,7 @@ function celebrate(){
   Z.react(stage,T,"head");
   for(var i=0;i<4;i++) (function(i){ setTimeout(function(){ Z.spawn(stage,size*(.2+Math.random()*.6),size*(.15+Math.random()*.4),kinds[i%kinds.length],size); },i*220); })(i);
   var cfg=T._cfg||{}; if(!cfg.mute) Z.sound("fanfare",cfg.volume);
-  say(a.days===0?pick(annivLines(),"a"):a.def,false);
+  if(a.days===0) say(pick(annivLines(),"a"),false); else setTimeout(tellSoon,600);
 }
 /* 가만히 있을 때 고개 까딱 */
 (function tiltLoop(){ setTimeout(function(){ if(T&&T.motion&&T.motion.idleTilt&&!down) Z.idleTilt(stage); tiltLoop(); },7000+Math.random()*9000); })();
@@ -78,7 +93,6 @@ function idleLoop(){
       (T.idleLines||[]).forEach(function(s){ pool.push([s,true]); });
       if(cfg.anniv&&cfg.anniv.days===0) annivLines().forEach(function(s){ pool.push([s,false]); pool.push([s,false]); });
       else if(cfg.anniv) pool.push([cfg.anniv.def,true]);
-      (cfg.soon||[]).forEach(function(x){ var k="s|"+x.title+"|"+x.days+"|"+(cfg.day||""); if(!isSeen(k)) pool.push([x.title+"까지 "+x.days+"일 남았어요.",true,"anniv",k]); });
       (cfg.today||[]).forEach(function(x){ var k="t|"+x.title+"|"+(x.time||"")+"|"+(cfg.day||""); if(!isSeen(k)) pool.push([(x.time?"오늘 "+x.time+"에 ":"오늘 ")+x.title+" 일정이 있어요. 확인해 볼까요?",false,"events",k]); });
       if(pool.length){ var it=pool[Math.floor(Math.random()*pool.length)]; if(it[2]) helpSay(it[0],it[2],it[3]); else say(it[0],it[1]); }
     }

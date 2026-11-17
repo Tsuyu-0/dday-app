@@ -187,7 +187,7 @@ Z.bubble=function(host,text,style,pos,idle){
     return el;
   }
   if(style==="memo"||style==="help"){ var MC=["#fff3b0","#ffd9e4","#d6f2e4","#dce8ff"]; el.style.setProperty("--memo",MC[Math.floor(Math.random()*MC.length)]); el.style.setProperty("--rot",(Math.random()*6-3).toFixed(1)+"deg"); }
-  if(style==="help"&&pos&&pos.buttons&&pos.buttons.length){ var bw=document.createElement("span"); bw.className="hbtns";
+  if(pos&&pos.buttons&&pos.buttons.length){ var bw=document.createElement("span"); bw.className="hbtns";
     pos.buttons.forEach(function(b){ var x=document.createElement("button"); x.textContent=b[0]; x.addEventListener("click",function(ev){ ev.stopPropagation(); el.remove(); if(pos.onAct) pos.onAct(b[1]); }); bw.appendChild(x); }); el.appendChild(bw); }
   if(pos&&pos.bottom!=null) el.style.bottom=pos.bottom+"px"; if(pos&&pos.top!=null) el.style.top=pos.top+"px";
   if(pos&&pos.maxWidth) sp.style.maxWidth=pos.maxWidth+"px";

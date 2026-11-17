@@ -142,7 +142,8 @@
     if (pick.anniv) { var a = pick.anniv, n = pick.n; extra.anniv = { id: a.id, title: a.title, label: n.label, days: n.days, lines: (a.lines || []).filter(Boolean), def: A.defaultLine(S, a, n) }; }
     if (pick.event) extra.event = { id: pick.event.id, title: pick.event.title, time: pick.event.time || "" };
     extra.today = label === "pet" ? A.on(S, A.ymd(new Date())).events.map(function (e) { return { title: e.title, time: e.time || "" }; }) : [];
-    extra.soon = A.upcoming(S).filter(function (x) { return x.n.days > 0 && x.n.days <= 14 && A.involves(S, x.a, t.id); }).slice(0, 3).map(function (x) { return { title: x.a.title, days: x.n.days }; });
+    var shownIds = LABELS.map(function (l) { return P[l] && P[l].pick ? P[l].pick.id : null; }).filter(Boolean);
+    extra.soon = A.tellFor(S, t.id, shownIds).slice(0, 3).map(function (x) { return { id: x.a.id, title: x.a.title, days: x.n.days, text: A.soonLine(S, x.a, x.n) }; });
     return JSON.parse(toView(JSON.stringify(Object.assign({}, t, { _cfg: extra }))));
   }
   function openPet(label, t) {

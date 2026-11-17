@@ -386,17 +386,20 @@ function annDialog(a,presetWho,presetDate){
       '<div class="fld">카드 이미지<div class="btns">'+(a.img?'<span class="annthumb" style="background-image:url(\''+esc(a.img)+'\')"></span>':"")+'<label class="btn">'+(a.img?"바꾸기":"이미지 넣기")+'<input type="file" accept="image/*" id="ad-img"></label>'+(a.img?'<button class="btn ghost" data-x="noimg">빼기</button>':"")+'</div></div>'+
       '<div class="fld">카드에 크게 보일 숫자<div class="chips"><button data-cnt="since"'+(a.count!=="dday"?' class="on"':"")+'>그날부터 계속 세기 (N일째)</button><button data-cnt="dday"'+(a.count==="dday"?' class="on"':"")+'>다음 기념일까지 (D-day)</button></div>'+(a.count!=="dday"&&!a.y?'<span class="note" style="font-weight:400;color:#e5484d">N일째를 세려면 연도가 있어야 해요</span>':"")+'</div>'+
       '<div class="fld"><button class="star-t'+(a.pin?" on":"")+'" data-apin="1">'+(a.pin?"★ 강조하는 기념일":"☆ 강조하기")+'</button></div>'+
+      '<div class="fld">미리 알려주기 <span style="font-weight:400" class="note">이때부터 캐릭터가 하루 한 번 직접 말해 줘요</span><div class="chips">'+AN.TELL.map(function(r){ return '<button data-tell="'+r[0]+'"'+(AN.tellOf(a)===r[0]?' class="on"':"")+">"+r[1]+"</button>"; }).join("")+"</div></div>"+
+      (AN.tellOf(a)?'<label class="fld">미리 알려줄 때 할 말 <span style="font-weight:400">· {n} 자리에 남은 날짜가 들어가요 · 비우면 "'+esc(AN.soonLine(S,{title:a.title||"기념일",who:a.who},{days:3}))+'"</span><input class="in" id="ad-tline" value="'+esc(a.tellLine||"")+'" placeholder="예: 우리 1주년까지 {n}일! 기대돼?"></label>':"")+
       '<label class="fld">그날 할 대사 <span style="font-weight:400">· 한 줄에 하나, 비워 두면 알아서 축하해요</span><textarea class="in" id="ad-lines" placeholder="오늘 무슨 날인지 알지?">'+esc((a.lines||[]).join("\n"))+"</textarea></label>"+
       '<div class="btns" style="justify-content:space-between;margin-top:6px">'+(isNew?"<span></span>":'<button class="btn ghost danger" data-x="del">지우기</button>')+'<span class="btns"><button class="btn" data-x="no">취소</button><button class="btn pri" data-x="ok">저장</button></span></div></div>';
   }
   function grab(){ a.title=$("#ad-title",w).value.trim(); var v=$("#ad-who",w).value.split(":"); a.who={type:v[0],id:v[1]}; var st=$("#ad-star",w); a.star=st?st.value:null;
-    var y=parseInt($("#ad-y",w).value,10); a.y=y>0?y:null; a.m=+$("#ad-m",w).value; a.d=+$("#ad-d",w).value; a.lines=$("#ad-lines",w).value.split("\n").map(function(s){return s.trim()}).filter(Boolean); }
+    var y=parseInt($("#ad-y",w).value,10); a.y=y>0?y:null; a.m=+$("#ad-m",w).value; a.d=+$("#ad-d",w).value; a.lines=$("#ad-lines",w).value.split("\n").map(function(s){return s.trim()}).filter(Boolean); var tl=$("#ad-tline",w); if(tl) a.tellLine=tl.value.trim(); }
   draw(); document.body.appendChild(w); setTimeout(function(){ var ti=$("#ad-title",w); if(ti&&!a.title) ti.focus(); },30);
   w.addEventListener("change",function(e){ if(e.target.id==="ad-who"){ grab(); a.star=null; draw(); }
     if(e.target.id==="ad-img"&&e.target.files[0]){ grab(); saveFileImg(e.target.files[0],1400).then(function(u){ if(u){ a.img=u; draw(); } else toast("그림을 못 읽었어요"); }); } });
   w.addEventListener("click",function(e){
     if(e.target===w){ w.remove(); return; }
     var pr=e.target.closest("[data-pre]"); if(pr){ grab(); a.title=pr.dataset.pre; draw(); return; }
+    var tb=e.target.closest("[data-tell]"); if(tb){ grab(); a.tell=+tb.dataset.tell; draw(); return; }
     var aic=e.target.closest("[data-aicon]"); if(aic){ grab(); a.icon=aic.dataset.aicon; draw(); return; }
     var rp=e.target.closest("[data-rep]"); if(rp){ grab(); a.repeat=rp.dataset.rep; draw(); return; }
     if(e.target.closest("[data-apin]")){ grab(); a.pin=!a.pin; draw(); return; }
