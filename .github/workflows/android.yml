@@ -102,3 +102,42 @@ jobs:
           files: |
             out/AnniversaryDday-Setup.exe
             out/AnniversaryDday-Portable.exe
+
+  mac:
+    needs: apk
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 버전 번호 (예전 저장소의 13번 다음부터 이어서)
+        shell: bash
+        run: echo "BUILD=$((GITHUB_RUN_NUMBER + 20))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop-tauri/src-tauri -> target
+
+      - name: 맥용 만들기 (인텔 · 애플 칩 둘 다)
+        working-directory: desktop-tauri
+        run: |
+          echo "{\"build\": ${{ env.BUILD }}}" > ../desktop/app/build.json
+          npm install --no-audit --no-fund
+          node build.js
+          npx tauri build --target universal-apple-darwin --bundles dmg --config "{\"version\":\"1.0.${{ env.BUILD }}\"}"
+          mkdir -p ../out
+          cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg ../out/AnniversaryDday-mac.dmg
+          ls -la ../out
+
+      - name: 같은 다운로드 링크에 맥 버전 추가
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ env.BUILD }}
+          files: out/AnniversaryDday-mac.dmg
