@@ -214,8 +214,14 @@ public class PhotoCards {
         Bitmap ic = res(ctx, "ic_rel_" + c.optString("icon", "heart"));
         if (ic == null) ic = res(ctx, "ic_rel_heart");
         if (ic == null) { heart(cv, x, y, s, false); return; }
-        Paint sh = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        cv.drawBitmap(ic, null, new RectF(x - s * .1f, y - s * .1f, x + s * 1.1f, y + s * 1.1f), sh);
+        RectF dst = new RectF(x - s * .1f, y - s * .1f, x + s * 1.1f, y + s * 1.1f);
+        // 선 없는 아이콘이라 사진 위에서도 보이게 은은한 그림자
+        Paint bp = new Paint(Paint.ANTI_ALIAS_FLAG); bp.setMaskFilter(new android.graphics.BlurMaskFilter(Math.max(2, ic.getWidth() * .06f), android.graphics.BlurMaskFilter.Blur.NORMAL));
+        int[] off = new int[2]; Bitmap sh = ic.extractAlpha(bp, off);
+        Paint sp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG); sp.setColor(0x55000000);
+        float sc = dst.width() / ic.getWidth();
+        cv.drawBitmap(sh, null, new RectF(dst.left + off[0] * sc, dst.top + off[1] * sc + s * .05f, dst.left + (off[0] + sh.getWidth()) * sc, dst.top + (off[1] + sh.getHeight()) * sc + s * .05f), sp);
+        cv.drawBitmap(ic, null, dst, new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG));
     }
 
     /** 사진 카드: 넣은 사진, 없으면 예시 그림 + 캐릭터 */
