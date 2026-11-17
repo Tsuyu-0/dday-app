@@ -41,6 +41,31 @@
     return out.slice(0, 6);
   }
 
+  /* 사진 카드 위젯: 기념일 카드(카드 이미지 · 강조 먼저) 최대 4장 */
+  var WD = ["일", "월", "화", "수", "목", "금", "토"];
+  function cardList(S) {
+    var list = AN.upcoming(S).filter(function (x) { return x.n && x.n.days >= 0; });
+    list.sort(function (p, q) { return (q.a.pin ? 1 : 0) - (p.a.pin ? 1 : 0); });
+    return list.slice(0, 4).map(function (x) {
+      var a = x.a, n = x.n, sid = AN.starOf(S, a), t = tok(S, sid), since = AN.isSince(a);
+      var date = a.y ? a.y + "." + String(a.m).padStart(2, "0") + "." + String(a.d).padStart(2, "0") + "(" + WD[new Date(a.y, a.m - 1, a.d).getDay()] + ")" : String(a.m).padStart(2, "0") + "." + String(a.d).padStart(2, "0");
+      var name = AN.whoName(S, a.who);
+      return {
+        meta: { t: a.title, who: name, date: date, mode: since ? "since" : "dday", s: since ? a.y + "-" + String(a.m).padStart(2, "0") + "-" + String(a.d).padStart(2, "0") : "", d: ymd(n.date), label: n.label && n.label !== a.title ? n.label : "", pin: !!a.pin, color: (t && t.color) || "#4f7cff", img: !!a.img },
+        a: a, t: t, imgKey: (a.img || "").length + ":" + (t ? t.id : ""),
+      };
+    });
+  }
+  /* 카드 이미지: 넣어 둔 사진은 작게 줄여서, 없으면 그 캐릭터 그림 */
+  function cardImage(c) {
+    if (c.a.img) return loadImg(c.a.img).then(function (im) {
+      if (!im) return "";
+      var W = 640, k = Math.min(1, W / im.width), cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+      cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); return cv.toDataURL("image/jpeg", 0.86);
+    }).catch(function () { return ""; });
+    return charImage(c.t).then(function (p) { return p || ""; }).catch(function () { return ""; });
+  }
+
   /* 폰 화면 위 캐릭터가 할 말: 그 캐릭터의 대사 + 다가오는 기념일 */
   function ovData(S, t, first) {
     if (!t) return null;
@@ -50,7 +75,9 @@
     (t.idleLines || []).forEach(function (x) { out.push(clean(x)); });
     var greet = "";
     if (first && first.n) { var a = first.a, n = first.n; var al = (a.lines || []).filter(Boolean); greet = n.days === 0 && al.length ? clean(al[0]) : AN.defaultLine(S, a, n); out.push(AN.defaultLine(S, a, n)); }
-    return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet };
+    var st = S.settings || {};
+    return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
+      voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6 };
   }
 
   /* 위젯에 들어갈 캐릭터 그림: 파츠를 순서대로 겹쳐 한 장으로 */
@@ -104,11 +131,14 @@
     var its = items(S), first = AN.upcoming(S).filter(function (x) { return x.n && x.n.days >= 0; })[0];
     var who = first && tok(S, AN.starOf(S, first.a)) || tok(S, (S.settings || {}).main) || (S.tokens || [])[0];
     var line = first ? AN.defaultLine(S, first.a, first.n) : "";
-    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first) };
-    var key = JSON.stringify([data, who && who.id, who && (who.img && who.img.src || "").length, who && Object.keys(who.parts || {}).length]);
+    var cl = cardList(S);
+    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first), cards: cl.map(function (c) { return c.meta; }) };
+    var key = JSON.stringify([data, who && who.id, who && (who.img && who.img.src || "").length, who && Object.keys(who.parts || {}).length, cl.map(function (c) { return c.imgKey; })]);
     if (key !== last) {
       last = key;
-      charImage(who).then(function (png) { return Widget.save({ data: JSON.stringify(data), image: png || "" }); }).catch(function () {});
+      Promise.all([charImage(who), Promise.all(cl.map(cardImage))]).then(function (r) {
+        return Widget.save({ data: JSON.stringify(data), image: r[0] || "", cardImgs: JSON.stringify(r[1]) });
+      }).catch(function () {});
     }
     schedule(S);
   }

@@ -33,6 +33,8 @@ public class DdayWidget extends AppWidgetProvider {
         for (int id : m.getAppWidgetIds(new ComponentName(ctx, DdayCalWidget.class))) DdayCalWidget.draw(ctx, m, id);
         for (int id : m.getAppWidgetIds(new ComponentName(ctx, DdaySinceWidget.class))) DdaySinceWidget.draw(ctx, m, id);
         for (int id : m.getAppWidgetIds(new ComponentName(ctx, DdayStampWidget.class))) DdayStampWidget.draw(ctx, m, id);
+        for (int id : m.getAppWidgetIds(new ComponentName(ctx, DdayPhotoWidget.class))) DdayPhotoWidget.draw(ctx, m, id);
+        for (int id : m.getAppWidgetIds(new ComponentName(ctx, DdayPhotoGridWidget.class))) DdayPhotoGridWidget.draw(ctx, m, id);
     }
 
     @Override

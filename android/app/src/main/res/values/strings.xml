@@ -12,4 +12,6 @@
     <string name="widget_cal_desc">이번 달 달력 · 기념일과 일정 점</string>
     <string name="widget_since_desc">함께한 지 며칠째 · 다음 100일까지</string>
     <string name="widget_stamp_desc">기념일까지 하루씩 도장 찍는 카드</string>
+    <string name="widget_photo_desc">기념일 사진 카드 한 장</string>
+    <string name="widget_photogrid_desc">기념일 사진 카드 4장</string>
 </resources>

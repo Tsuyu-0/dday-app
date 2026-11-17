@@ -144,6 +144,26 @@
                 android:resource="@xml/widget_stamp_info" />
         </receiver>
 
+        <receiver android:name=".DdayPhotoWidget" android:label="사진 카드" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_photo_info" />
+        </receiver>
+
+        <receiver android:name=".DdayPhotoGridWidget" android:label="사진 카드 4장" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_photogrid_info" />
+        </receiver>
+
         <service
             android:name=".OverlayService"
             android:exported="false"

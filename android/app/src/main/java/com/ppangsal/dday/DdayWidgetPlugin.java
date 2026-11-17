@@ -34,6 +34,21 @@ public class DdayWidgetPlugin extends Plugin {
                 try (FileOutputStream out = new FileOutputStream(f)) { out.write(bytes); }
             } catch (Exception e) { /* 그림이 없어도 위젯은 그려요 */ }
         }
+        // 사진 카드 위젯용 그림 (최대 4장)
+        String cj = call.getString("cardImgs", null);
+        if (cj != null) {
+            try {
+                org.json.JSONArray arr = new org.json.JSONArray(cj);
+                for (int i = 0; i < 4; i++) {
+                    File f = new File(ctx.getFilesDir(), "widget_card_" + i + ".img");
+                    String s = i < arr.length() ? arr.optString(i, "") : "";
+                    if (s.isEmpty()) { f.delete(); continue; }
+                    int comma = s.indexOf(',');
+                    byte[] bytes = Base64.decode(comma >= 0 ? s.substring(comma + 1) : s, Base64.DEFAULT);
+                    try (FileOutputStream out = new FileOutputStream(f)) { out.write(bytes); }
+                }
+            } catch (Exception e) { }
+        }
         DdayWidget.updateAll(ctx);
         if (OverlayService.running) { try { ctx.startService(new Intent(ctx, OverlayService.class).setAction(OverlayService.ACT_REFRESH)); } catch (Exception e) { } }
         call.resolve(new JSObject());

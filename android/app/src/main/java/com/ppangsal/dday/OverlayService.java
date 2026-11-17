@@ -45,7 +45,8 @@ public class OverlayService extends Service {
     static boolean running = false;
 
     WindowManager wm; WindowManager.LayoutParams lp;
-    LinearLayout root, menu; TextView bub; ImageView img;
+    LinearLayout root, menu; BubbleView bub; ImageView img;
+    String voice = ""; float vPitch = 0, vSpeed = 1, vVol = .6f;
     final Handler h = new Handler(Looper.getMainLooper());
     final Random rnd = new Random();
     List<String> lines = new ArrayList<>();
@@ -90,11 +91,8 @@ public class OverlayService extends Service {
         sizePx = dp(112);
         root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        bub = new TextView(this);
-        bub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13); bub.setTextColor(0xFF1B2230); bub.setMaxWidth(dp(190));
-        bub.setPadding(dp(12), dp(7), dp(12), dp(7)); bub.setGravity(Gravity.CENTER);
-        GradientDrawable bg = new GradientDrawable(); bg.setColor(Color.WHITE); bg.setCornerRadius(dp(14)); bg.setStroke(dp(1), 0xFFD5DCE8);
-        bub.setBackground(bg); bub.setElevation(dp(3)); bub.setVisibility(View.GONE);
+        bub = new BubbleView(this);
+        bub.setMaxWidth(dp(210)); bub.setVisibility(View.GONE);
 
         menu = new LinearLayout(this); menu.setOrientation(LinearLayout.HORIZONTAL); menu.setVisibility(View.GONE);
         menu.addView(menuBtn("앱 열기", v -> { hideMenu(); try { DdayWidget.openApp(this).send(); } catch (Exception e) { } }));
@@ -150,7 +148,7 @@ public class OverlayService extends Service {
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2); p.setMargins(dp(3), dp(4), dp(3), 0); b.setLayoutParams(p);
         b.setOnClickListener(l); return b;
     }
-    void showMenu() { bub.setVisibility(View.GONE); menu.setVisibility(View.VISIBLE); h.postDelayed(this::hideMenu, 4000); }
+    void showMenu() { h.removeCallbacks(hideBub); bub.setVisibility(View.GONE); menu.setVisibility(View.VISIBLE); h.postDelayed(this::hideMenu, 4000); }
     void hideMenu() { if (menu != null) menu.setVisibility(View.GONE); }
 
     void hop() {
@@ -158,11 +156,36 @@ public class OverlayService extends Service {
         a.setDuration(380); a.start();
     }
 
-    final Runnable hideBub = () -> { if (bub != null) bub.setVisibility(View.GONE); };
+    final Runnable hideBub = () -> {
+        if (bub == null) return;
+        bub.animate().alpha(0f).scaleX(.9f).scaleY(.9f).setDuration(160).withEndAction(() -> { bub.setVisibility(View.GONE); bub.setAlpha(1f); bub.setScaleX(1f); bub.setScaleY(1f); }).start();
+    };
+    Runnable typer;
     void say(String s) {
         if (bub == null || s == null || s.isEmpty()) return;
-        bub.setText(s); bub.setVisibility(View.VISIBLE);
-        h.removeCallbacks(hideBub); h.postDelayed(hideBub, Math.max(2200, 900 + s.length() * 110L));
+        h.removeCallbacks(hideBub); if (typer != null) h.removeCallbacks(typer);
+        hideMenu();
+        final String full = s;
+        // 크기를 먼저 맞춰 두고(투명 글자) 한 글자씩 보여 줘요
+        android.text.SpannableString sp = new android.text.SpannableString(full);
+        sp.setSpan(new android.text.style.ForegroundColorSpan(0x00000000), 0, full.length(), 0);
+        bub.setText(sp);
+        bub.setVisibility(View.VISIBLE);
+        bub.setPivotX(bub.getWidth() > 0 ? bub.getWidth() / 2f : dp(60)); bub.setPivotY(dp(40));
+        bub.setScaleX(.6f); bub.setScaleY(.6f); bub.setAlpha(0f);
+        bub.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).setInterpolator(new android.view.animation.OvershootInterpolator(2.2f)).start();
+        Babble.play(this, full, voice, vPitch, vSpeed, vVol);
+        final int step = Math.max(28, (int) (48 / Math.max(.5f, vSpeed)));
+        final int[] k = { 0 };
+        typer = new Runnable() { @Override public void run() {
+            k[0] = Math.min(full.length(), k[0] + 1);
+            android.text.SpannableString s2 = new android.text.SpannableString(full);
+            if (k[0] < full.length()) s2.setSpan(new android.text.style.ForegroundColorSpan(0x00000000), k[0], full.length(), 0);
+            bub.setText(s2);
+            if (k[0] < full.length()) h.postDelayed(this, step);
+        } };
+        h.postDelayed(typer, 120);
+        h.postDelayed(hideBub, Math.max(2600, 1200 + full.length() * 120L));
     }
 
     String pick() { if (lines.isEmpty()) return name.isEmpty() ? "불렀어?" : "불렀어?"; return lines.get(rnd.nextInt(lines.size())); }
@@ -180,6 +203,7 @@ public class OverlayService extends Service {
                 JSONArray ls = ov.optJSONArray("lines");
                 if (ls != null) for (int i = 0; i < ls.length(); i++) { String s = ls.optString(i, "").trim(); if (!s.isEmpty()) lines.add(s); }
                 greet = ov.optString("greet", ""); name = ov.optString("name", "");
+                voice = ov.optString("voice", ""); vPitch = (float) ov.optDouble("pitch", 0); vSpeed = (float) ov.optDouble("speed", 1); vVol = (float) ov.optDouble("vol", .6);
             }
         } catch (Exception e) { }
     }
