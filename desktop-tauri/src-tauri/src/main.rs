@@ -16,10 +16,12 @@ static QUITTING: AtomicBool = AtomicBool::new(false);
 
 /// 예전(Electron) 버전과 같은 데이터 폴더를 써요 → 옮길 필요 없이 그대로 이어져요.
 fn data_dir() -> PathBuf {
-    let base = std::env::var("APPDATA").map(PathBuf::from).unwrap_or_else(|_| {
-        let h = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-        PathBuf::from(h).join(".local").join("share")
-    });
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    let base = if cfg!(target_os = "macos") {
+        PathBuf::from(&home).join("Library").join("Application Support") // 맥: 응용 프로그램 지원 폴더
+    } else {
+        std::env::var("APPDATA").map(PathBuf::from).unwrap_or_else(|_| PathBuf::from(&home).join(".local").join("share"))
+    };
     let d = base.join("기념일 D-day");
     let _ = fs::create_dir_all(&d);
     d
