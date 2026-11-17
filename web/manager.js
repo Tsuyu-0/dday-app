@@ -442,7 +442,7 @@ function setView(){
     '<div class="box"><div class="box-t">소리</div><div class="tiles" style="margin-bottom:12px">'+tile("s-mute",!!c.mute,"무음 모드","캐릭터를 눌러도 조용해요")+'</div><div class="lbl">누를 때 소리 크기</div><div class="slide"><input type="range" id="s-vol" min="0" max="100" value="'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'"><span class="val" id="s-vol-v">'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'%</span></div><div class="lbl">말소리 크기</div><div class="slide"><input type="range" id="s-vvol" min="0" max="100" value="'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'"><span class="val" id="s-vvol-v">'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'%</span></div><p class="note" style="margin-top:8px">어떤 소리가 날지는 캐릭터마다 [성격 · 대사]에서 골라요.</p></div>'+
     ovBox()+updBox()+
     '<div class="box"><div class="box-t">데이터</div><div class="btns"><button class="btn" data-act="backup">백업 파일 만들기</button><label class="btn">백업에서 되돌리기<input type="file" id="rf" accept=".json,application/json"></label><button class="btn" data-act="charexpall">캐릭터 전부 내보내기</button><label class="btn">캐릭터 불러오기<input type="file" id="charimp" accept=".ddchar,.json,application/json"></label><button class="btn ghost" data-act="folder">저장 폴더 열기</button></div></div>'+
-    '<p class="note" style="text-align:center;margin-top:18px">기념일 D-day <span id="ver2"></span> · 만든 사람 빵살 · 나만 쓰는 테스트 버전</p></div>';
+    '<p class="note" style="text-align:center;margin-top:18px">기념일 D-day <span id="ver2"></span></p></div>';
 }
 
 
