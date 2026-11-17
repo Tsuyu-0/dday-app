@@ -217,6 +217,7 @@ document.addEventListener("visibilitychange",function(){ if(document.visibilityS
 /* 피드백 보내기: Web3Forms로 보내면 만든 사람 메일함으로 바로 가요 (주소는 앱에 안 보여요) */
 var FB_KEY="fc8d7bb7-abf2-487d-bb85-d7292217363d";
 function fbBox(){ return '<div class="box"><div class="box-t">피드백 보내기<small>불편한 점 · 버그 · 이런 기능 있으면 좋겠다</small></div><p class="note" style="margin-bottom:10px">써 주신 내용은 만든 사람에게 바로 전달돼요. 답장이 필요하면 이메일을 같이 적어 주세요.</p><div class="btns"><button class="btn pri" data-act="feedback">피드백 쓰기</button></div></div>'; }
+function fbNote(w,m){ var n=w.querySelector(".fb-note"); if(!n){ n=document.createElement("p"); n.className="fb-note"; w.querySelector(".fbdlg .btns").before(n); } n.textContent=m; }
 function openFeedback(){
   var KINDS=[["bug","버그 · 오류"],["idea","이런 기능 있으면"],["etc","그 밖의 말"]], kind="idea";
   var w=document.createElement("div"); w.className="veil";
@@ -235,16 +236,21 @@ function openFeedback(){
     var sb=e.target.closest(".fb-send"); if(!sb) return;
     var msg=ta.value.trim(); if(msg.length<2){ toast("내용을 적어 주세요"); ta.focus(); return; }
     if(w.querySelector(".fb-bot").checked){ w.remove(); return; }
-    if(!FB_KEY){ toast("피드백 보내기를 준비하고 있어요. 다음 버전에서 열려요"); return; }
+    if(!FB_KEY){ fbNote(w,"지금은 피드백을 보낼 수 없어요."); return; }
     var mail=w.querySelector(".fb-m").value.trim(), lb=KINDS.filter(function(x){return x[0]===kind})[0][1];
     sb.disabled=true; sb.textContent="보내는 중…";
     (w.querySelector(".fb-d").checked?api.version().catch(function(){return "?";}):Promise.resolve(null)).then(function(v){
       var plat=window.__TAURI__?(/Mac/i.test(navigator.platform||"")?"맥":"윈도우"):(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()?"안드로이드":"웹앱");
       var body={access_key:FB_KEY,subject:"[기념일 D-day] "+lb+" 피드백",from_name:"기념일 D-day 앱",kind:lb,message:msg};
       if(mail) body.email=mail; if(v) body.info="v"+v+" · "+plat+" · "+navigator.userAgent.slice(0,160);
-      return fetch("https://api.web3forms.com/submit",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)}).then(function(r){ return r.json(); });
-    }).then(function(r){ if(r&&r.success){ w.remove(); toast("보냈어요! 고마워요 :)"); } else throw 0; })
-      .catch(function(){ sb.disabled=false; sb.textContent="다시 보내기"; toast("못 보냈어요. 인터넷 연결을 확인하고 다시 눌러 주세요"); });
+      return fetch("https://api.web3forms.com/submit",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)})
+        .catch(function(){ throw "net"; })
+        .then(function(r){ return r.json().catch(function(){ return {success:false}; }).then(function(j){ if(!r.ok||!j||!j.success) throw "svc"; return j; }); });
+    }).then(function(){ w.remove(); toast("보냈어요! 고마워요 :)"); })
+      .catch(function(why){ sb.disabled=false; sb.textContent="다시 보내기";
+        if(why==="net"&&!navigator.onLine) { fbNote(w,"인터넷에 연결되어 있지 않아요. 연결한 뒤 다시 눌러 주세요."); return; }
+        if(why==="net") { fbNote(w,"보내는 중에 연결이 끊겼어요. 잠시 뒤 다시 눌러 주세요."); return; }
+        fbNote(w,"지금은 피드백을 보낼 수 없어요. 써 주신 내용은 이 창에 그대로 있으니, 나중에 다시 보내 주세요."); });
   });
 }
 function updBox(){
