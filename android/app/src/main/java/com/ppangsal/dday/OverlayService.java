@@ -50,6 +50,19 @@ public class OverlayService extends Service {
     final Handler h = new Handler(Looper.getMainLooper());
     final Random rnd = new Random();
     List<String> lines = new ArrayList<>();
+    /* 누른 부위: 앱이 보내 준 50×50 부위 지도 (0 없음 1 머리 2 얼굴 3 몸 4 팔 5 다리 6 귀 7 꼬리) + 부위별 대사 */
+    String zmap = ""; java.util.Map<String, List<String>> zoneLines = new java.util.HashMap<>();
+    static final String[] ZK = { null, "head", "face", "body", "hand", "foot", "ear", "tail", "all" };
+    String zoneAt(float fx, float fy) {
+        if (zmap.length() != 2500) return null;
+        int x = Math.round(fx * 49), y = Math.round(fy * 49);
+        for (int r = 0; r <= 2; r++) for (int dy = -r; dy <= r; dy++) for (int dx = -r; dx <= r; dx++) {
+            int xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx > 49 || yy > 49) continue;
+            int v = zmap.charAt(yy * 50 + xx) - '0'; if (v > 0 && v < ZK.length) return ZK[v];
+        }
+        return null;
+    }
+    String pickFor(float fx, float fy) { String z = zoneAt(fx, fy); List<String> L = z == null ? null : zoneLines.get(z); return L != null && !L.isEmpty() ? L.get(rnd.nextInt(L.size())) : pick(); }
     String greet = "", name = "";
     ObjectAnimator breathe;
     int sizePx;
@@ -150,12 +163,13 @@ public class OverlayService extends Service {
 
         final int slop = ViewConfiguration.get(this).getScaledTouchSlop();
         img.setOnTouchListener(new View.OnTouchListener() {
-            float sx, sy; int ox, oy; boolean drag, longed; long t0;
+            float sx, sy, lx, ly; int ox, oy; boolean drag, longed; long t0;
             final Runnable lpress = () -> { longed = true; showMenu(); };
             @Override public boolean onTouch(View v, MotionEvent e) {
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         stopWalk(); touching = true; quietUntil = System.currentTimeMillis() + 5000;
+                        lx = e.getX() / Math.max(1, v.getWidth()); ly = e.getY() / Math.max(1, v.getHeight());
                         sx = e.getRawX(); sy = e.getRawY(); ox = lp.x; oy = lp.y; drag = false; longed = false; t0 = System.currentTimeMillis();
                         h.postDelayed(lpress, 550); return true;
                     case MotionEvent.ACTION_MOVE:
@@ -167,7 +181,7 @@ public class OverlayService extends Service {
                     case MotionEvent.ACTION_CANCEL:
                         h.removeCallbacks(lpress); touching = false; quietUntil = System.currentTimeMillis() + 5000;
                         if (drag) getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", lp.x).putInt("ovY", lp.y).apply();
-                        else if (!longed && e.getActionMasked() == MotionEvent.ACTION_UP) { hideMenu(); hop(); say(pick()); }
+                        else if (!longed && e.getActionMasked() == MotionEvent.ACTION_UP) { hideMenu(); hop(); say(pickFor(lx, ly)); }
                         return true;
                 }
                 return false;
@@ -235,6 +249,9 @@ public class OverlayService extends Service {
             JSONObject d = new JSONObject(getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).getString("data", "{}"));
             JSONObject ov = d.optJSONObject("ov");
             if (ov != null) {
+                zmap = ov.optString("zmap", ""); zoneLines.clear();
+                JSONObject zl = ov.optJSONObject("zl");
+                if (zl != null) { java.util.Iterator<String> it = zl.keys(); while (it.hasNext()) { String k = it.next(); JSONArray a = zl.optJSONArray(k); List<String> L = new ArrayList<>(); if (a != null) for (int i = 0; i < a.length(); i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) L.add(x); } if (!L.isEmpty()) zoneLines.put(k, L); } }
                 JSONArray ls = ov.optJSONArray("lines");
                 if (ls != null) for (int i = 0; i < ls.length(); i++) { String s = ls.optString(i, "").trim(); if (!s.isEmpty()) lines.add(s); }
                 greet = ov.optString("greet", ""); name = ov.optString("name", "");

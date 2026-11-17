@@ -86,7 +86,8 @@
     var st = S.settings || {};
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
       voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6,
-      wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1 };
+      wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1,
+      zl: (function () { var o = {}; Object.keys(t.zones || {}).forEach(function (k) { var a = ((t.zones[k] || {}).lines || []).map(clean).filter(Boolean); if (a.length) o[k] = a; }); return o; })() };
   }
 
   /* 위젯에 들어갈 캐릭터 그림: 파츠를 순서대로 겹쳐 한 장으로 */
@@ -145,7 +146,10 @@
     var key = JSON.stringify([data, who && who.id, who && (who.img && who.img.src || "").length, who && Object.keys(who.parts || {}).length, cl.map(function (c) { return c.imgKey; })]);
     if (key !== last) {
       last = key;
-      Promise.all([charImage(who), Promise.all(cl.map(cardImage))]).then(function (r) {
+      /* 폰 위 캐릭터: 어디를 눌렀는지 알 수 있게 부위 지도(50×50)도 같이 보내요 */
+      var zp = (window.Zones && who && Zones.build) ? Zones.build(who).then(function (m) { if (!m) return ""; var N = 200, Q = 50, out = ""; for (var y = 0; y < Q; y++) for (var x = 0; x < Q; x++) { var best = 0; for (var yy = 0; yy < 4 && !best; yy++) for (var xx = 0; xx < 4 && !best; xx++) best = m[(y * 4 + yy) * N + x * 4 + xx] || 0; out += String(best); } return out; }).catch(function () { return ""; }) : Promise.resolve("");
+      Promise.all([charImage(who), Promise.all(cl.map(cardImage)), zp]).then(function (r) {
+        if (data.ov) data.ov.zmap = r[2] || "";
         return Widget.save({ data: JSON.stringify(data), image: r[0] || "", cardImgs: JSON.stringify(r[1]) });
       }).catch(function () {});
     }
