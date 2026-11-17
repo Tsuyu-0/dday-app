@@ -32,7 +32,7 @@ Z.ckHTML=function(t){
 
 /* 눌린 곳 지도 (200×200, 0 없음 1 머리 2 얼굴 3 몸) */
 var N=200;
-function load(src){ return new Promise(function(res){ if(!src) return res(null); var i=new Image(); i.onload=function(){res(i)}; i.onerror=function(){res(null)}; i.src=src; }); }
+function load(src){ return new Promise(function(res){ if(!src) return res(null); var i=new Image(); i.onload=function(){res(i)}; i.onerror=function(){res(null)}; /* Tauri asset URLs are cross-origin: request CORS before assigning src so canvas pixels remain readable. */ if(/^(?:https?:|asset:)/i.test(src)) i.crossOrigin="anonymous"; i.src=src; }); }
 function alpha(im){
   if(!im) return null;
   var c=document.createElement("canvas"); c.width=c.height=N; var x=c.getContext("2d");
