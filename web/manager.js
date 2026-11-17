@@ -245,11 +245,12 @@ function openFeedback(){
       if(mail) body.email=mail; if(v) body.info="v"+v+" · "+plat+" · "+navigator.userAgent.slice(0,160);
       return fetch("https://api.web3forms.com/submit",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)})
         .catch(function(){ throw "net"; })
-        .then(function(r){ return r.json().catch(function(){ return {success:false}; }).then(function(j){ if(!r.ok||!j||!j.success) throw "svc"; return j; }); });
+        .then(function(r){ return r.json().catch(function(){ return {success:false}; }).then(function(j){ if(!r.ok||!j||!j.success) throw (r.status===429||/limit|quota|exceed|plan/i.test(String(j&&j.message||""))?"full":"svc"); return j; }); });
     }).then(function(){ w.remove(); toast("보냈어요! 고마워요 :)"); })
       .catch(function(why){ sb.disabled=false; sb.textContent="다시 보내기";
         if(why==="net"&&!navigator.onLine) { fbNote(w,"인터넷에 연결되어 있지 않아요. 연결한 뒤 다시 눌러 주세요."); return; }
         if(why==="net") { fbNote(w,"보내는 중에 연결이 끊겼어요. 잠시 뒤 다시 눌러 주세요."); return; }
+        if(why==="full") { fbNote(w,"이번 달에 받을 수 있는 피드백이 다 찼어요. 다음 달부터 다시 보낼 수 있어요. 써 주신 내용은 복사해 두면 좋아요."); return; }
         fbNote(w,"지금은 피드백을 보낼 수 없어요. 써 주신 내용은 이 창에 그대로 있으니, 나중에 다시 보내 주세요."); });
   });
 }
