@@ -681,3 +681,16 @@ body.otaku .mtile{border-radius:7px;border:1.5px solid var(--il)}
 .dl-add{font-size:12.5px;font-weight:700;color:var(--acc);padding:4px 2px}
 body.dark .dl-row .dl-who{background:rgba(79,124,255,.15)}
 body.dark .dl-row.b .dl-who{background:rgba(255,92,154,.14)}
+.wsg{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.ws{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px;border-radius:14px;border:1.5px solid var(--line2);background:var(--card,#fff);text-align:left}
+.ws.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--accs)}
+.ws-n{font-size:13px;font-weight:800;margin-top:4px}
+.ws small{font-size:11px;color:var(--sub);line-height:1.35}
+.ws-pv{position:relative;width:100%;height:62px;border-radius:10px;overflow:hidden;display:block}
+.ws-pv i{position:absolute;left:8px;top:8px;width:46px;height:7px;border-radius:4px;background:currentColor;opacity:.75}
+.ws-pv b{position:absolute;right:8px;bottom:5px;font-size:17px;font-weight:900}
+.ws-photo .ws-pv{background:linear-gradient(160deg,#8fb1e8,#d7a7c6);color:#fff}.ws-photo .ws-pv b{text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.ws-polaroid .ws-pv{background:#f4efe6;color:#2a2f3a}.ws-polaroid .ws-pv::before{content:"";position:absolute;left:12px;right:12px;top:6px;bottom:6px;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.15);transform:rotate(-2deg)}.ws-polaroid .ws-pv::after{content:"";position:absolute;left:18px;right:18px;top:11px;height:26px;background:linear-gradient(160deg,#b9cdf2,#e8c4d8);transform:rotate(-2deg)}.ws-polaroid .ws-pv i{display:none}.ws-polaroid .ws-pv b{z-index:2;font-size:14px;right:18px;bottom:9px}
+.ws-sticker .ws-pv{background:#fde8f0 radial-gradient(#f6c3d6 1.2px,transparent 1.4px) 0 0/10px 10px;color:#2a2f3a;outline:1.5px dashed #f19bbd;outline-offset:-5px}.ws-sticker .ws-pv b{background:#ff6fa0;color:#fff;font-size:13px;padding:2px 9px;border-radius:99px}
+.ws-minimal .ws-pv{background:#fff;color:#15181f;box-shadow:inset 0 0 0 1px #e6e9ef;border-left:4px solid #4f7cff}.ws-minimal .ws-pv i{opacity:.25}
+.ws-night .ws-pv{background:linear-gradient(135deg,#1c2033,#2b2346);color:#edebff}.ws-night .ws-pv b{text-shadow:0 0 8px #9a8cff}

@@ -200,6 +200,14 @@ function ovBox(){
   if(!window.ddOverlay) return "";
   return '<div class="box"><div class="box-t">폰 화면에 캐릭터 띄우기</div><p class="note" style="margin-bottom:10px">다른 앱을 쓰는 중에도 캐릭터가 화면 위에 떠 있어요. 끌어서 옮기고, 누르면 말풍선으로 한마디 해요. 길게 누르면 [앱 열기 · 숨기기]가 나와요. 나와 있는 동안 알림창에 작은 알림이 하나 있어요.</p><div class="btns" id="ovbtns"><span class="note">확인하는 중…</span></div><p class="note" style="margin-top:8px">캐릭터가 저절로 사라지면 휴대폰 설정 → 애플리케이션 → 기념일 D-day → 배터리를 <b>제한 없음</b>으로 바꿔 주세요.</p></div>';
 }
+/* 안드로이드 사진 카드 위젯 꾸미기 */
+var WSTYLES=[["photo","사진 카드","사진 위에 하얀 글씨"],["polaroid","폴라로이드","하얀 테두리 · 마스킹테이프"],["sticker","다꾸 스티커","파스텔 땡땡이 · 동그란 사진"],["minimal","미니멀","하얀 카드 · 큰 숫자"],["night","밤하늘","어두운 바탕 · 반짝이는 숫자"]];
+function wsBox(){
+  if(!window.ddOverlay) return "";
+  var cur=(S.settings||{}).widgetStyle||"photo";
+  return '<div class="box"><div class="box-t">위젯 꾸미기</div><p class="note" style="margin-bottom:10px">홈 화면의 <b>사진 카드 · 사진 카드 4장</b> 위젯 모양이에요. 카드 사진은 기념일마다 [카드 이미지]로 넣을 수 있고, 없으면 그 캐릭터 그림이 들어가요.</p><div class="wsg">'+
+    WSTYLES.map(function(w){ return '<button class="ws ws-'+w[0]+(cur===w[0]?" on":"")+'" data-wstyle="'+w[0]+'"><span class="ws-pv"><i></i><b>D-7</b></span><span class="ws-n">'+w[1]+'</span><small>'+w[2]+"</small></button>"; }).join("")+"</div></div>";
+}
 function ovSync(){
   if(!window.ddOverlay) return; window.ddOverlay.status().then(function(st){ var el=$("#ovbtns"); if(!el) return;
     if(!st.granted) el.innerHTML='<span class="note" style="flex:1">먼저 이 앱에 <b>다른 앱 위에 표시</b>를 허용해 주세요. 허용하고 돌아오면 켤 수 있어요.</span><button class="btn pri" data-act="ovperm">허용하러 가기</button>';
@@ -413,7 +421,7 @@ function setView(){
     tile("s-hide",!!c.allHidden,"잠깐 다 숨기기","트레이 아이콘을 누르면 돌아와요")+
     tile("s-login",c.launchAtLogin!==false,"컴퓨터 켜면 같이 시작","관리 창 없이 캐릭터만 떠요")+"</div></div>"+
     '<div class="box"><div class="box-t">소리</div><div class="tiles" style="margin-bottom:12px">'+tile("s-mute",!!c.mute,"무음 모드","캐릭터를 눌러도 조용해요")+'</div><div class="lbl">누를 때 소리 크기</div><div class="slide"><input type="range" id="s-vol" min="0" max="100" value="'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'"><span class="val" id="s-vol-v">'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'%</span></div><div class="lbl">말소리 크기</div><div class="slide"><input type="range" id="s-vvol" min="0" max="100" value="'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'"><span class="val" id="s-vvol-v">'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'%</span></div><p class="note" style="margin-top:8px">어떤 소리가 날지는 캐릭터마다 [성격 · 대사]에서 골라요.</p></div>'+
-    ovBox()+updBox()+
+    ovBox()+wsBox()+updBox()+
     '<div class="box"><div class="box-t">데이터</div><div class="btns"><button class="btn" data-act="backup">백업 파일 만들기</button><label class="btn">백업에서 되돌리기<input type="file" id="rf" accept=".json,application/json"></label><button class="btn" data-act="charexpall">캐릭터 전부 내보내기</button><label class="btn">캐릭터 불러오기<input type="file" id="charimp" accept=".ddchar,.json,application/json"></label><button class="btn ghost" data-act="folder">저장 폴더 열기</button></div></div>'+
     '<p class="note" style="text-align:center;margin-top:18px">기념일 D-day <span id="ver2"></span> · 만든 사람 빵살 · 나만 쓰는 테스트 버전</p></div>';
 }
@@ -779,6 +787,7 @@ app.addEventListener("click",function(e){
   var lk=e.target.closest("[data-look]"); if(lk){ setCfg("look",lk.dataset.look); render(); return; }
   var acc=e.target.closest("[data-accent]"); if(acc){ setCfg("accent",acc.dataset.accent); render(); return; }
   var ld2=e.target.closest("[data-lead]"); if(ld2){ setCfg("annivLead",+ld2.dataset.lead); render(); return; }
+  var wsb=e.target.closest("[data-wstyle]"); if(wsb){ setCfg("widgetStyle",wsb.dataset.wstyle); saveSoon(true); render(); toast("위젯 모양을 바꿨어요 · 홈 화면에서 확인해 보세요"); return; }
   var th=e.target.closest("[data-theme]"); if(th){ setCfg("theme",th.dataset.theme); render(); return; }
   var sz=e.target.closest("[data-size]"); if(sz){ setSize(+sz.dataset.size); return; }
   var mm=e.target.closest("[data-mem]"); if(mm){ var p=pairOf(mm), id=mm.dataset.mem, i=p.tokenIds.indexOf(id); if(i>=0) p.tokenIds.splice(i,1); else p.tokenIds.push(id); mm.classList.toggle("on"); saveSoon(); if(S.settings.duo===p.id||p.tokenIds.length<=3) render(); return; }
