@@ -5,6 +5,9 @@ on:
     branches: [mac-test]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   mac:
     runs-on: macos-latest
@@ -34,8 +37,11 @@ jobs:
           cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg ../out/AnniversaryDday-mac-test.dmg
           ls -la ../out
 
-      - uses: actions/upload-artifact@v4
+      # 공개 안 되는 '초안' 릴리스에만 올려요 (최신 버전 링크에는 안 잡혀요)
+      - uses: softprops/action-gh-release@v2
         with:
-          name: mac-test
-          path: out/AnniversaryDday-mac-test.dmg
-          retention-days: 7
+          tag_name: mac-test
+          name: 맥 테스트 (비공개 초안)
+          draft: true
+          target_commitish: mac-test
+          files: out/AnniversaryDday-mac-test.dmg
