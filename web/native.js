@@ -120,12 +120,19 @@
       else if (e.remind === "morning") at.setHours(9, 0, 0, 0);
       if (at > now && at < until) list.push({ id: hashId("e" + e.id + e.remind + e.date + (e.time || "")), title: e.title, body: when + (e.time ? " " + e.time : "") + " 일정이 있어요", schedule: { at: at, allowWhileIdle: true } });
     });
+    /* 기념일 알림: 3일 전부터 하루 한 번(아침 9시) + 당일. 기념일마다 [미리 알려주기]를 더 짧게(하루 전·끄기) 해 두면 그만큼만 */
     if (cfg.annivNotify !== false) AN.upcoming(S).forEach(function (x) {
       if (!x.n || x.n.days < 0 || x.n.days > 60) return;
-      var at = new Date(x.n.date); at.setHours(9, 0, 0, 0); if (at <= now) return;
-      var a = x.a, name = AN.whoName(S, a.who);
-      list.push({ id: hashId("a" + a.id + ymd(x.n.date)), title: (name ? name + " · " : "") + a.title, body: "오늘이에요! " + (x.n.label && x.n.label !== a.title ? x.n.label : ""), schedule: { at: at, allowWhileIdle: true } });
+      var a = x.a, name = AN.whoName(S, a.who), title = (name ? name + " · " : "") + a.title;
+      var before = Math.min(3, AN.tellOf ? AN.tellOf(a) : 3);
+      for (var k = before; k >= 0; k--) {
+        var at = new Date(x.n.date); at.setDate(at.getDate() - k); at.setHours(9, 0, 0, 0); if (at <= now) continue;
+        var body = k === 0 ? "오늘이에요! " + (x.n.label && x.n.label !== a.title ? x.n.label : "")
+          : (AN.soonLine ? AN.soonLine(S, a, { days: k }) : a.title + "까지 " + k + "일 남았어요");
+        list.push({ id: hashId("a" + a.id + ymd(x.n.date) + "-" + k), title: title, body: body, schedule: { at: at, allowWhileIdle: true } });
+      }
     });
+    list.sort(function (p, q) { return p.schedule.at - q.schedule.at; });
     return list.slice(0, 60);
   }
   function schedule(S) {
