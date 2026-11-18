@@ -126,7 +126,7 @@ public class OverlayService extends Service {
         lp.y += yShift; yShift = 0;
         int tw = 0, th = 0;
         if (top != null) {
-            if (top == bub) bub.setMaxWidth(Math.max(dp(120), Math.min(dp(230), W - pad * 2)));
+            if (top == bub) bub.setMaxWidth(Math.max(dp(120), Math.min(dp(212), W - pad * 2)));
             top.measure(View.MeasureSpec.makeMeasureSpec(W - pad * 2, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
             tw = top.getMeasuredWidth(); th = top.getMeasuredHeight();
         }
@@ -196,14 +196,14 @@ public class OverlayService extends Service {
         root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.START);
 
         bub = new BubbleView(this);
-        bub.setMaxWidth(dp(230)); bub.setVisibility(View.GONE);
+        bub.setMaxWidth(dp(212)); bub.setVisibility(View.GONE);
 
         menu = new LinearLayout(this); menu.setOrientation(LinearLayout.HORIZONTAL); menu.setVisibility(View.GONE);
         menu.addView(menuBtn("앱 열기", v -> { hideMenu(); try { DdayWidget.openApp(this).send(); } catch (Exception e) { } }));
         menu.addView(menuBtn("숨기기", v -> { getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putBoolean("overlayOn", false).apply(); stopSelf(); }));
 
         img = new ImageView(this); img.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(sizePx, sizePx); ip.topMargin = dp(4);
+        LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(sizePx, sizePx); ip.topMargin = 0;
         root.addView(bub, new LinearLayout.LayoutParams(-2, -2)); root.addView(menu, new LinearLayout.LayoutParams(-2, -2)); root.addView(img, ip);
 
         SharedPreferences sp = getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE);

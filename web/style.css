@@ -133,6 +133,8 @@ input[type=color]{width:38px;height:38px;border:1px solid var(--line2);border-ra
 .ln{display:flex;gap:6px;align-items:center}
 .ln .n{width:20px;font-size:11.5px;color:var(--dim);text-align:right;flex:none;font-variant-numeric:tabular-nums}
 .ln .in{flex:1}
+.ln{align-items:flex-start}.ln .bstyle,.ln .ib{margin-top:1px}
+.ln textarea.ln-t{height:38px;min-height:38px;padding:9px 11px;line-height:1.4;resize:none;overflow:hidden;font-family:inherit;display:block}
 .ib{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);flex:none}
 .ib:hover{background:var(--hov);color:var(--ink)}
 .ib svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.7}
@@ -674,6 +676,8 @@ body.otaku .mtile{border-radius:7px;border:1.5px solid var(--il)}
 .dl-who .av{width:26px;height:26px;border-radius:50%;overflow:hidden;position:relative;flex:none;background:rgba(0,0,0,.04)}
 .dl-who .wn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dl-t{flex:1;min-width:0;height:34px}
+.dl-row{align-items:flex-start}
+textarea.dl-t.ln-t{height:34px;min-height:34px;padding:7px 11px}
 .dl-sty{flex:none;height:30px;padding:0 10px;border-radius:9px;border:1px solid var(--line2);font-size:11.5px;font-weight:700;color:var(--sub);background:var(--card,#fff)}
 .dl-sty.s-sfx{font-family:"DDSfx",sans-serif;font-size:14px;color:#141418;border-color:#141418}
 .dl-sty.s-shout{color:#e0457b;border-color:#ffb3cb}
