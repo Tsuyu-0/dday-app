@@ -72,14 +72,17 @@
   }
 
   /* 폰 화면 위 캐릭터가 할 말: 그 캐릭터의 대사 + 다가오는 기념일 */
+  var STYLE_MARK = { thought: "\u00A7t\u00A7", shout: "\u00A7s\u00A7", imagine: "\u00A7i\u00A7", memo: "\u00A7m\u00A7", sfx: "\u00A7x\u00A7", help: "\u00A7m\u00A7" };
   function ovData(S, t, first, shownIds) {
     if (!t) return null;
-    var Z = window.Zones, out = [], clean = function (x) { if (!x) return "";
-      /* "//" 는 말풍선 나누기: 조각마다 정리해서 "//" 로 다시 이어 보내요 (폰에서 차례로 보여 줘요) */
-      return String(x).split("//").map(function (seg) { var p = Z && Z.parseLine ? Z.parseLine(seg, "speech") : { text: seg }; return String(p.text || "").trim(); }).filter(Boolean).join("//"); };
+    var Z = window.Zones, out = [], clean = function (x, def) { if (!x) return "";
+      /* "//" 는 말풍선 나누기: 조각마다 정리해서 "//" 로 다시 이어 보내요 (폰에서 차례로 보여 줘요).
+         말풍선 모양은 조각 앞에 표시를 붙여 보내요: §t§ 생각 · §s§ 놀람 · §i§ 상상 · §m§ 포스트잇 · §x§ 효과음 */
+      return String(x).split("//").map(function (seg) { var p = Z && Z.parseLine ? Z.parseLine(seg, def || "speech") : { text: seg }; var tx = String(p.text || "").trim(); return tx ? (STYLE_MARK[p.style] || "") + tx : ""; }).filter(Boolean).join("//"); };
+    var zdef = function (k) { try { return (Z && Z.get ? Z.get(t, k).bubble : "") || "speech"; } catch (e) { return "speech"; } };
     (t.lines || []).forEach(function (x) { out.push(clean(x)); });
-    Object.keys(t.zones || {}).forEach(function (k) { ((t.zones[k] || {}).lines || []).forEach(function (x) { out.push(clean(x)); }); });
-    (t.idleLines || []).forEach(function (x) { out.push(clean(x)); });
+    Object.keys(t.zones || {}).forEach(function (k) { ((t.zones[k] || {}).lines || []).forEach(function (x) { out.push(clean(x, zdef(k))); }); });
+    (t.idleLines || []).forEach(function (x) { out.push(clean(x, "thought")); });
     var greet = "";
     if (first && first.n && first.n.days === 0) { var a = first.a, n = first.n; var al = (a.lines || []).filter(Boolean); greet = al.length ? clean(al[0]) : AN.defaultLine(S, a, n); out.push(AN.defaultLine(S, a, n)); }
     /* 미리 알려주기: 정한 날부터 "며칠 남았어"로 먼저 인사하고, 가끔 혼잣말로도 말해요 */
@@ -89,8 +92,8 @@
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
       voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6,
       quietSilent: !!st.ovQuietSilent, wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1,
-      idle: (t.idleLines || []).map(clean).filter(Boolean).slice(0, 60), idleVoice: !!t.idleVoice,
-      zl: (function () { var o = {}; Object.keys(t.zones || {}).forEach(function (k) { var a = ((t.zones[k] || {}).lines || []).map(clean).filter(Boolean); if (a.length) o[k] = a; }); return o; })() };
+      idle: (t.idleLines || []).map(function (x) { return clean(x, "thought"); }).filter(Boolean).slice(0, 60), idleVoice: !!t.idleVoice,
+      zl: (function () { var o = {}; Object.keys(t.zones || {}).forEach(function (k) { var a = ((t.zones[k] || {}).lines || []).map(function (x) { return clean(x, zdef(k)); }).filter(Boolean); if (a.length) o[k] = a; }); return o; })() };
   }
 
   /* ---- 페어 같이 띄우기 (PC와 같은 규칙: [페어 → 같이 띄우기]를 켠 페어, 앞의 5명까지) ---- */
@@ -105,7 +108,7 @@
   /* 폰에서 주고받을 대화: [{w: 몇 번째 사람, t: 대사, m: 몸짓}] 목록 */
   function duoTalks(S, d) {
     var nA = nameOfTok(S, d.ids[0]), nB = nameOfTok(S, d.ids[1]);
-    var one = function (w, t, sty, m) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t || (w || 0) >= d.ids.length) return null; if (sty === "thought") t = "(" + t + ")"; return { w: w || 0, t: t, m: m || "" }; };
+    var one = function (w, t, sty, m) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t || (w || 0) >= d.ids.length) return null; t = (STYLE_MARK[sty] || "") + t; return { w: w || 0, t: t, m: m || "" }; };
     var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? one(l[0], l[1], l[2]) : one(l.w, l.t, l.s, l.m); }).filter(Boolean); };
     var src = Array.isArray(d.p.dialogs) && d.p.dialogs.length ? d.p.dialogs : DEF_DIALOGS;
     var list = src.map(conv).filter(function (c) { return c.length; }), base = list.length;

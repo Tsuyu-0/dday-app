@@ -240,6 +240,13 @@ public class OverlayService extends Service {
             if (s == null || s.isEmpty()) return;
             h.removeCallbacks(hideBub); if (typer != null) h.removeCallbacks(typer);
             hideMenu();
+            // 말풍선 모양: 앱이 대사 앞에 붙여 보낸 표시 (§t§ 생각 · §s§ 놀람 · §i§ 상상 · §m§ 포스트잇 · §x§ 효과음)
+            String st = "speech";
+            if (s.length() > 3 && s.charAt(0) == '\u00A7' && s.charAt(2) == '\u00A7') {
+                switch (s.charAt(1)) { case 't': st = "thought"; break; case 's': st = "shout"; break; case 'i': st = "imagine"; break; case 'm': st = "memo"; break; case 'x': st = "sfx"; break; }
+                s = s.substring(3).trim(); if (s.isEmpty()) return;
+            }
+            bub.setBubbleStyle(st);
             final String full = s;
             // 크기를 먼저 맞춰 두고(투명 글자) 한 글자씩 보여 줘요
             android.text.SpannableString sp = new android.text.SpannableString(full);
