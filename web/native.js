@@ -72,7 +72,7 @@
   }
 
   /* 폰 화면 위 캐릭터가 할 말: 그 캐릭터의 대사 + 다가오는 기념일 */
-  function ovData(S, t, first) {
+  function ovData(S, t, first, shownIds) {
     if (!t) return null;
     var Z = window.Zones, out = [], clean = function (x) { if (!x) return "";
       /* "//" 는 말풍선 나누기: 조각마다 정리해서 "//" 로 다시 이어 보내요 (폰에서 차례로 보여 줘요) */
@@ -83,7 +83,7 @@
     var greet = "";
     if (first && first.n && first.n.days === 0) { var a = first.a, n = first.n; var al = (a.lines || []).filter(Boolean); greet = al.length ? clean(al[0]) : AN.defaultLine(S, a, n); out.push(AN.defaultLine(S, a, n)); }
     /* 미리 알려주기: 정한 날부터 "며칠 남았어"로 먼저 인사하고, 가끔 혼잣말로도 말해요 */
-    var soon = AN.tellFor ? AN.tellFor(S, t.id, [t.id]) : [];
+    var soon = AN.tellFor ? AN.tellFor(S, t.id, shownIds || [t.id]) : [];
     soon.slice(0, 3).forEach(function (x, i) { var l = AN.soonLine(S, x.a, x.n); if (!greet && i === 0) greet = l; out.push(l); out.push(l); });
     var st = S.settings || {};
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
@@ -91,6 +91,37 @@
       quietSilent: !!st.ovQuietSilent, wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1,
       idle: (t.idleLines || []).map(clean).filter(Boolean).slice(0, 60), idleVoice: !!t.idleVoice,
       zl: (function () { var o = {}; Object.keys(t.zones || {}).forEach(function (k) { var a = ((t.zones[k] || {}).lines || []).map(clean).filter(Boolean); if (a.length) o[k] = a; }); return o; })() };
+  }
+
+  /* ---- 페어 같이 띄우기 (PC와 같은 규칙: [페어 → 같이 띄우기]를 켠 페어, 앞의 5명까지) ---- */
+  function duoPair(S) {
+    var id = (S.settings || {}).duo; if (!id) return null;
+    var p = (S.pairs || []).filter(function (x) { return x.id === id; })[0]; if (!p) return null;
+    var ids = (p.tokenIds || []).filter(function (x) { return tok(S, x); }).slice(0, 5);
+    return ids.length >= 2 ? { p: p, ids: ids } : null;
+  }
+  var DEF_DIALOGS = [[[0, "오늘 뭐 했어?"], [1, "너 기다렸지!"]], [[0, "배고프지 않아?"], [1, "방금 그 말 기다렸어"]], [[1, "나 오늘 좀 멋있지?"], [0, "...응, 쪼끔"]], [[0, "{B}!"], [1, "왜~"], [0, "그냥 불러 봤어"]], [[1, "졸려..."], [0, "조금만 더 버티자"]]];
+  function nameOfTok(S, id) { var t = tok(S, id); return t ? (t.nick || t.name || "") : ""; }
+  /* 폰에서 주고받을 대화: [{w: 몇 번째 사람, t: 대사, m: 몸짓}] 목록 */
+  function duoTalks(S, d) {
+    var nA = nameOfTok(S, d.ids[0]), nB = nameOfTok(S, d.ids[1]);
+    var one = function (w, t, sty, m) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t || (w || 0) >= d.ids.length) return null; if (sty === "thought") t = "(" + t + ")"; return { w: w || 0, t: t, m: m || "" }; };
+    var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? one(l[0], l[1], l[2]) : one(l.w, l.t, l.s, l.m); }).filter(Boolean); };
+    var src = Array.isArray(d.p.dialogs) && d.p.dialogs.length ? d.p.dialogs : DEF_DIALOGS;
+    var list = src.map(conv).filter(function (c) { return c.length; }), base = list.length;
+    try {
+      AN.upcoming(S).filter(function (x) { return x.n.days >= 0 && x.n.days <= 14 && x.a.who && x.a.who.type === "pair" && x.a.who.id === d.p.id; }).slice(0, 1).forEach(function (x) {
+        var tt = x.n.label && x.n.label !== x.a.title ? x.a.title + " " + x.n.label : x.a.title;
+        var c = x.n.days === 0 ? [{ w: 0, t: "오늘 " + tt + "이야!" }, { w: 1, t: "알아, 기억하고 있었어" }] : [{ w: 0, t: tt + "까지 " + x.n.days + "일 남았대" }, { w: 1, t: "벌써? 뭐 준비하지..." }];
+        list.push(c, c);
+      });
+    } catch (e) {}
+    return { list: list.slice(0, 60), base: base };
+  }
+  /* 누른 부위를 알 수 있는 50×50 지도 */
+  function zmapOf(t) {
+    if (!(window.Zones && t && Zones.build)) return Promise.resolve("");
+    return Zones.build(t).then(function (m) { if (!m) return ""; var N = 200, Q = 50, out = ""; for (var y = 0; y < Q; y++) for (var x = 0; x < Q; x++) { var best = 0; for (var yy = 0; yy < 4 && !best; yy++) for (var xx = 0; xx < 4 && !best; xx++) best = m[(y * 4 + yy) * N + x * 4 + xx] || 0; out += String(best); } return out; }).catch(function () { return ""; });
   }
 
   /* 위젯에 들어갈 캐릭터 그림: 파츠를 순서대로 겹쳐 한 장으로 */
@@ -154,15 +185,28 @@
     var who = today || tok(S, (S.settings || {}).main) || (first && tok(S, AN.starOf(S, first.a))) || (S.tokens || [])[0];
     var line = first ? AN.defaultLine(S, first.a, first.n) : "";
     var cl = cardList(S);
-    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first), cards: cl.map(function (c) { return c.meta; }) };
-    var key = JSON.stringify([data, who && who.id, who && (who.img && who.img.src || "").length, who && Object.keys(who.parts || {}).length, cl.map(function (c) { return c.imgKey; })]);
+    /* 페어 같이 띄우기: 대표(또는 오늘의) 캐릭터가 그 페어에 있거나, 대표 캐릭터가 나오는 날이면 페어가 나란히 나와요 */
+    var d = duoPair(S), mem = [who];
+    if (d && who && (d.ids.indexOf(who.id) >= 0 || !today)) mem = d.ids.map(function (id) { return tok(S, id); });
+    var shownIds = mem.filter(Boolean).map(function (t) { return t.id; });
+    var ov = ovData(S, mem[0], first, shownIds);
+    if (ov && mem.length > 1) {
+      ov.members = mem.map(function (t) { var o = ovData(S, t, null, shownIds); o.id = t.id; return o; });
+      var tk = duoTalks(S, d); ov.dialogs = tk.list; ov.dialogBase = tk.base;
+      ov.duoAuto = d.p.duoAuto !== false; ov.duoVoice = d.p.duoVoice !== false; ov.meet = d.p.meet !== false;
+      /* 첫째 사람 인사: 기념일·며칠 남았어 인사는 그대로 */
+      ov.members[0].greet = ov.greet;
+    }
+    var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ov, cards: cl.map(function (c) { return c.meta; }) };
+    var key = JSON.stringify([data, mem.map(function (t) { return t ? [t.id, (t.img && t.img.src || "").length, Object.keys(t.parts || {}).map(function (k) { return k + ((t.parts[k] && t.parts[k].src) || "").length; }).join(",")] : null; }), cl.map(function (c) { return c.imgKey; })]);
     if (key !== last) {
       last = key;
-      /* 폰 위 캐릭터: 어디를 눌렀는지 알 수 있게 부위 지도(50×50)도 같이 보내요 */
-      var zp = (window.Zones && who && Zones.build) ? Zones.build(who).then(function (m) { if (!m) return ""; var N = 200, Q = 50, out = ""; for (var y = 0; y < Q; y++) for (var x = 0; x < Q; x++) { var best = 0; for (var yy = 0; yy < 4 && !best; yy++) for (var xx = 0; xx < 4 && !best; xx++) best = m[(y * 4 + yy) * N + x * 4 + xx] || 0; out += String(best); } return out; }).catch(function () { return ""; }) : Promise.resolve("");
-      Promise.all([charImage(who), Promise.all(cl.map(cardImage)), zp]).then(function (r) {
-        if (data.ov) data.ov.zmap = r[2] || "";
-        return Widget.save({ data: JSON.stringify(data), image: r[0] || "", cardImgs: JSON.stringify(r[1]) });
+      var multi = mem.length > 1;
+      Promise.all([charImage(who), Promise.all(cl.map(cardImage)), Promise.all(mem.map(zmapOf)), multi ? Promise.all(mem.map(function (t) { return charImage(t).then(function (x) { return x || ""; }); })) : Promise.resolve(null)]).then(function (r) {
+        if (data.ov) { data.ov.zmap = r[2][0] || ""; if (data.ov.members) data.ov.members.forEach(function (m, i) { m.zmap = r[2][i] || ""; }); }
+        var arg = { data: JSON.stringify(data), image: r[0] || "", cardImgs: JSON.stringify(r[1]) };
+        if (r[3]) arg.ovImgs = JSON.stringify(r[3]);
+        return Widget.save(arg);
       }).catch(function () {});
     }
     schedule(S);
@@ -200,6 +244,8 @@
   api.setState = function (s) { lastS = s; setState(s); clearTimeout(t); t = setTimeout(function () { refresh(s); }, 1500); };
   api.getState = function () { return getState().then(function (s) { lastS = s; setTimeout(function () { refresh(s); }, 1200); return s; }); };
   /* 설정(대표 캐릭터·돌아다니기 등)만 바꿔도 폰 위 캐릭터 · 위젯에 바로 반영돼요 */
-  api.setSettings = function (k, v) { setSettings(k, v); if (!lastS) return; lastS.settings = lastS.settings || {}; lastS.settings[k] = v; clearTimeout(t); t = setTimeout(function () { refresh(lastS); }, 600); };
+  api.setSettings = function (k, v) { setSettings(k, v);
+    /* [들어 보기]: 방금 고친 대화가 폰 위 캐릭터에 먼저 넘어간 뒤 시작해요 */
+    if (k === "talkNow") { var ti = v && typeof v === "object" && typeof v.i === "number" ? v.i : -1; clearTimeout(t); if (lastS) refresh(lastS); setTimeout(function () { Widget.overlayTalk({ i: ti }).catch(function () {}); }, 1600); return; } if (!lastS) return; lastS.settings = lastS.settings || {}; lastS.settings[k] = v; clearTimeout(t); t = setTimeout(function () { refresh(lastS); }, 600); };
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") api.getState && getState().then(function (s) { refresh(s); }); });
 })();
