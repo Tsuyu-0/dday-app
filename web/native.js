@@ -142,7 +142,9 @@
   function refresh(S) {
     AN = window.Annivs; if (!S || !AN) return;
     var its = items(S), first = AN.upcoming(S).filter(function (x) { return x.n && x.n.days >= 0; })[0];
-    var who = first && tok(S, AN.starOf(S, first.a)) || tok(S, (S.settings || {}).main) || (S.tokens || [])[0];
+    /* 폰 화면 위 캐릭터 · 위젯: 대표 캐릭터가 먼저. 기념일 당일에만 그 기념일의 캐릭터가 나와요 (PC와 같게) */
+    var today = first && first.n && first.n.days === 0 ? tok(S, AN.starOf(S, first.a)) : null;
+    var who = today || tok(S, (S.settings || {}).main) || (first && tok(S, AN.starOf(S, first.a))) || (S.tokens || [])[0];
     var line = first ? AN.defaultLine(S, first.a, first.n) : "";
     var cl = cardList(S);
     var data = { items: its, since: sinceList(S), line: line, name: who && who.name || "", ov: ovData(S, who, first), cards: cl.map(function (c) { return c.meta; }) };
