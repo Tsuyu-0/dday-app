@@ -196,7 +196,10 @@
   }, 5000);
 
   var api = window.api, setState = api.setState, getState = api.getState;
-  api.setState = function (s) { setState(s); clearTimeout(t); t = setTimeout(function () { refresh(s); }, 1500); };
-  api.getState = function () { return getState().then(function (s) { setTimeout(function () { refresh(s); }, 1200); return s; }); };
+  var lastS = null, setSettings = api.setSettings;
+  api.setState = function (s) { lastS = s; setState(s); clearTimeout(t); t = setTimeout(function () { refresh(s); }, 1500); };
+  api.getState = function () { return getState().then(function (s) { lastS = s; setTimeout(function () { refresh(s); }, 1200); return s; }); };
+  /* 설정(대표 캐릭터·돌아다니기 등)만 바꿔도 폰 위 캐릭터 · 위젯에 바로 반영돼요 */
+  api.setSettings = function (k, v) { setSettings(k, v); if (!lastS) return; lastS.settings = lastS.settings || {}; lastS.settings[k] = v; clearTimeout(t); t = setTimeout(function () { refresh(lastS); }, 600); };
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") api.getState && getState().then(function (s) { refresh(s); }); });
 })();
