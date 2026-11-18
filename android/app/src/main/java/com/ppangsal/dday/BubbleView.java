@@ -12,6 +12,8 @@ import android.widget.TextView;
 public class BubbleView extends TextView {
     final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), line = new Paint(Paint.ANTI_ALIAS_FLAG);
     final float d, tail;
+    /** 꼬리가 가리킬 x (캐릭터 가운데). 0 이하면 말풍선 가운데 */
+    public float tailX = -1;
 
     public BubbleView(Context c) {
         super(c);
@@ -32,7 +34,7 @@ public class BubbleView extends TextView {
         Path p = new Path();
         p.addRoundRect(box, r, r, Path.Direction.CW);
         Path t = new Path();
-        float cx = w / 2;
+        float cx = tailX > 0 ? Math.max(18 * d, Math.min(w - 18 * d, tailX)) : w / 2;
         t.moveTo(cx - 8 * d, box.bottom - 1 * d); t.lineTo(cx - 1 * d, box.bottom + tail - 2 * d); t.lineTo(cx + 7 * d, box.bottom - 1 * d); t.close();
         p.op(t, Path.Op.UNION);
         cv.drawPath(p, fill);

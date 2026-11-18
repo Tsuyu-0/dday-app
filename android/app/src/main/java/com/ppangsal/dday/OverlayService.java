@@ -88,6 +88,7 @@ public class OverlayService extends Service {
         walk();
     } };
     void walk() {
+        if (imgOff != 0 || yShift != 0) place(null);
         int sw = getResources().getDisplayMetrics().widthPixels, rw = Math.max(root.getWidth(), sizePx);
         final int x0 = lp.x, dist = Math.round((150 + rnd.nextFloat() * 370) * getResources().getDisplayMetrics().density);
         int t = x0 + (rnd.nextBoolean() ? dist : -dist); t = Math.max(0, Math.min(sw - rw, t));
@@ -105,20 +106,52 @@ public class OverlayService extends Service {
         walker.addListener(new android.animation.AnimatorListenerAdapter() {
             boolean done = false;
             void fin() { if (done) return; done = true; walker = null; img.setTranslationY(0); img.setScaleX(1f);
-                getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", lp.x).apply(); }
+                getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", charX()).apply(); }
             @Override public void onAnimationEnd(android.animation.Animator a) { fin(); }
             @Override public void onAnimationCancel(android.animation.Animator a) { fin(); }
         });
         walker.start();
     }
     void stopWalk() { if (walker != null) walker.cancel(); }
+    /* 말풍선·메뉴가 캐릭터보다 넓어도 화면 밖으로 나가 잘리지 않게: 창을 넓히고 위치를 화면 안으로 맞춰요.
+       캐릭터는 제자리에 그대로 두고(imgOff), 말풍선만 화면 안에서 좌우로 밀어요. 위가 모자라면 잠깐 아래로 내려요(yShift). */
+    int imgOff = 0, yShift = 0;
+    int charX() { return lp.x + imgOff; }
+    View topShown() { return bub != null && bub.getVisibility() == View.VISIBLE ? bub : menu != null && menu.getVisibility() == View.VISIBLE ? menu : null; }
+    void marginL(View v, int m) { LinearLayout.LayoutParams p = (LinearLayout.LayoutParams) v.getLayoutParams(); if (p.leftMargin != m) { p.leftMargin = m; v.setLayoutParams(p); } }
+    void place(View top) {
+        if (root == null || lp == null) return;
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        int W = dm.widthPixels, H = dm.heightPixels, pad = dp(6), cx = charX();
+        lp.y += yShift; yShift = 0;
+        int tw = 0, th = 0;
+        if (top != null) {
+            if (top == bub) bub.setMaxWidth(Math.max(dp(120), Math.min(dp(230), W - pad * 2)));
+            top.measure(View.MeasureSpec.makeMeasureSpec(W - pad * 2, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            tw = top.getMeasuredWidth(); th = top.getMeasuredHeight();
+        }
+        int tl = cx + sizePx / 2 - tw / 2;
+        tl = Math.max(pad, Math.min(W - tw - pad, tl));
+        int left = top != null ? Math.min(cx, tl) : cx;
+        imgOff = cx - left;
+        marginL(img, imgOff); marginL(bub, top == bub ? tl - left : 0); marginL(menu, top == menu ? tl - left : 0);
+        if (top == bub) bub.tailX = cx + sizePx / 2f - tl;
+        if (top != null) {
+            int need = lp.y + th + sizePx + dp(8) - H;
+            if (need > 0) { yShift = Math.min(need, lp.y); lp.y -= yShift; }
+        }
+        lp.x = left;
+        try { wm.updateViewLayout(root, lp); } catch (Exception e) { }
+    }
     /* 가로·세로를 바꾸면 화면 크기가 달라져서 캐릭터가 밖으로 나갈 수 있어요: 화면 안으로 다시 넣어요 */
     void keepInside() {
         if (root == null || lp == null) return;
         android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-        int rw = Math.max(root.getWidth(), sizePx), rh = Math.max(root.getHeight(), sizePx);
-        int nx = Math.max(0, Math.min(dm.widthPixels - rw, lp.x)), ny = Math.max(0, Math.min(dm.heightPixels - rh, lp.y));
-        if (nx != lp.x || ny != lp.y) { lp.x = nx; lp.y = ny; try { wm.updateViewLayout(root, lp); } catch (Exception e) { } }
+        lp.y += yShift; yShift = 0;
+        int cx = Math.max(0, Math.min(dm.widthPixels - sizePx, charX()));
+        lp.y = Math.max(0, Math.min(dm.heightPixels - sizePx - dp(8), lp.y));
+        lp.x = cx; imgOff = 0;
+        place(topShown());
     }
     @Override public void onConfigurationChanged(android.content.res.Configuration c) {
         super.onConfigurationChanged(c); stopWalk();
@@ -160,10 +193,10 @@ public class OverlayService extends Service {
     void build() {
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         sizePx = dp(112);
-        root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.START);
 
         bub = new BubbleView(this);
-        bub.setMaxWidth(dp(210)); bub.setVisibility(View.GONE);
+        bub.setMaxWidth(dp(230)); bub.setVisibility(View.GONE);
 
         menu = new LinearLayout(this); menu.setOrientation(LinearLayout.HORIZONTAL); menu.setVisibility(View.GONE);
         menu.addView(menuBtn("앱 열기", v -> { hideMenu(); try { DdayWidget.openApp(this).send(); } catch (Exception e) { } }));
@@ -171,7 +204,7 @@ public class OverlayService extends Service {
 
         img = new ImageView(this); img.setScaleType(ImageView.ScaleType.FIT_CENTER);
         LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(sizePx, sizePx); ip.topMargin = dp(4);
-        root.addView(bub); root.addView(menu); root.addView(img, ip);
+        root.addView(bub, new LinearLayout.LayoutParams(-2, -2)); root.addView(menu, new LinearLayout.LayoutParams(-2, -2)); root.addView(img, ip);
 
         SharedPreferences sp = getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE);
         int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
@@ -194,7 +227,7 @@ public class OverlayService extends Service {
             @Override public boolean onTouch(View v, MotionEvent e) {
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
-                        stopWalk(); touching = true; quietUntil = System.currentTimeMillis() + 5000;
+                        stopWalk(); yShift = 0; touching = true; quietUntil = System.currentTimeMillis() + 5000;
                         lx = e.getX() / Math.max(1, v.getWidth()); ly = e.getY() / Math.max(1, v.getHeight());
                         sx = e.getRawX(); sy = e.getRawY(); ox = lp.x; oy = lp.y; drag = false; longed = false; t0 = System.currentTimeMillis();
                         h.postDelayed(lpress, 550); return true;
@@ -206,7 +239,7 @@ public class OverlayService extends Service {
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
                         h.removeCallbacks(lpress); touching = false; quietUntil = System.currentTimeMillis() + 5000;
-                        if (drag) getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", lp.x).putInt("ovY", lp.y).apply();
+                        if (drag) getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putInt("ovX", charX()).putInt("ovY", lp.y).apply();
                         else if (!longed && e.getActionMasked() == MotionEvent.ACTION_UP) { hideMenu(); hop(); say(pickFor(lx, ly)); }
                         return true;
                 }
@@ -222,8 +255,8 @@ public class OverlayService extends Service {
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2); p.setMargins(dp(3), dp(4), dp(3), 0); b.setLayoutParams(p);
         b.setOnClickListener(l); return b;
     }
-    void showMenu() { h.removeCallbacks(hideBub); bub.setVisibility(View.GONE); menu.setVisibility(View.VISIBLE); h.postDelayed(this::hideMenu, 4000); }
-    void hideMenu() { if (menu != null) menu.setVisibility(View.GONE); }
+    void showMenu() { h.removeCallbacks(hideBub); bub.setVisibility(View.GONE); menu.setVisibility(View.VISIBLE); place(menu); h.postDelayed(this::hideMenu, 4000); }
+    void hideMenu() { if (menu != null && menu.getVisibility() != View.GONE) { menu.setVisibility(View.GONE); place(topShown()); } }
 
     void hop() {
         ObjectAnimator a = ObjectAnimator.ofFloat(img, "translationY", 0, -dp(14), 0);
@@ -232,7 +265,7 @@ public class OverlayService extends Service {
 
     final Runnable hideBub = () -> {
         if (bub == null) return;
-        bub.animate().alpha(0f).scaleX(.9f).scaleY(.9f).setDuration(160).withEndAction(() -> { bub.setVisibility(View.GONE); bub.setAlpha(1f); bub.setScaleX(1f); bub.setScaleY(1f); }).start();
+        bub.animate().alpha(0f).scaleX(.9f).scaleY(.9f).setDuration(160).withEndAction(() -> { bub.setVisibility(View.GONE); bub.setAlpha(1f); bub.setScaleX(1f); bub.setScaleY(1f); place(topShown()); }).start();
     };
     Runnable typer;
     /* "//" 로 나눈 대사는 말풍선을 하나씩 차례로 보여 줘요 */
@@ -254,8 +287,9 @@ public class OverlayService extends Service {
         android.text.SpannableString sp = new android.text.SpannableString(full);
         sp.setSpan(new android.text.style.ForegroundColorSpan(0x00000000), 0, full.length(), 0);
         bub.setText(sp);
-        bub.setVisibility(View.VISIBLE);
-        bub.setPivotX(bub.getWidth() > 0 ? bub.getWidth() / 2f : dp(60)); bub.setPivotY(dp(40));
+        bub.animate().cancel(); bub.setVisibility(View.VISIBLE);
+        place(bub);
+        bub.setPivotX(bub.tailX > 0 ? bub.tailX : bub.getMeasuredWidth() / 2f); bub.setPivotY(bub.getMeasuredHeight());
         bub.setScaleX(.6f); bub.setScaleY(.6f); bub.setAlpha(0f);
         bub.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).setInterpolator(new android.view.animation.OvershootInterpolator(2.2f)).start();
         if (!quiet) Babble.play(this, full, voice, vPitch, vSpeed, vVol);
