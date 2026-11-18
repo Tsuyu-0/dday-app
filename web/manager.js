@@ -200,7 +200,7 @@ window.ddShowUpdate=function(info){ UPD=info; if(info&&info.newer) render(); };
 /* 폰(안드로이드) 화면 위에 캐릭터 띄우기 */
 function ovBox(){
   if(!window.ddOverlay) return "";
-  return '<div class="box"><div class="box-t">폰 화면에 캐릭터 띄우기</div><p class="note" style="margin-bottom:10px">다른 앱을 쓰는 중에도 캐릭터가 화면 위에 떠 있어요. 끌어서 옮기고, 누르면 말풍선으로 한마디 해요. 길게 누르면 [앱 열기 · 숨기기]가 나와요. 나와 있는 동안 알림창에 작은 알림이 하나 있어요.</p><div class="btns" id="ovbtns"><span class="note">확인하는 중…</span></div><p class="note" style="margin-top:8px">캐릭터가 저절로 사라지면 휴대폰 설정 → 애플리케이션 → 기념일 D-day → 배터리를 <b>제한 없음</b>으로 바꿔 주세요.</p></div>';
+  return '<div class="box"><div class="box-t">폰 화면에 캐릭터 띄우기</div><p class="note" style="margin-bottom:10px">다른 앱을 쓰는 중에도 캐릭터가 화면 위에 떠 있어요. 끌어서 옮기고, 누르면 말풍선으로 한마디 해요. 길게 누르면 [앱 열기 · 숨기기]가 나와요. 나와 있는 동안 알림창에 작은 알림이 하나 있어요.</p><div class="btns" id="ovbtns"><span class="note">확인하는 중…</span></div><div class="tiles" style="margin-top:10px;grid-template-columns:1fr">'+tile("s-ovquiet",!!(S.settings||{}).ovQuietSilent,"무음 모드일 땐 조용히","꺼 두면 무음·진동 모드에서도 누르면 말소리가 나요. 소리 크기는 휴대폰 미디어 음량을 따라요")+'</div><p class="note" style="margin-top:8px">캐릭터가 저절로 사라지면 휴대폰 설정 → 애플리케이션 → 기념일 D-day → 배터리를 <b>제한 없음</b>으로 바꿔 주세요.</p></div>';
 }
 /* 안드로이드 사진 카드 위젯 꾸미기 */
 var WSTYLES=[["photo","사진 카드","사진 위에 하얀 글씨"],["polaroid","폴라로이드","하얀 테두리 · 마스킹테이프"],["sticker","다꾸 스티커","파스텔 땡땡이 · 동그란 사진"],["minimal","미니멀","하얀 카드 · 큰 숫자"],["night","밤하늘","어두운 바탕 · 반짝이는 숫자"]];
@@ -812,6 +812,7 @@ function toggleTile(id){
   if(id==="s-mute") setCfg("mute",!c.mute);
   if(id==="s-swap") setCfg("annivSwap",c.annivSwap===false);
   if(id==="s-notify") setCfg("annivNotify",c.annivNotify===false);
+  if(id==="s-ovquiet") setCfg("ovQuietSilent",!c.ovQuietSilent);
   render();
 }
 app.addEventListener("click",function(e){

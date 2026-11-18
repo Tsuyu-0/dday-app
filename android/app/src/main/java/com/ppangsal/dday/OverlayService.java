@@ -338,6 +338,7 @@ public class OverlayService extends Service {
                 greet = ov.optString("greet", ""); name = ov.optString("name", "");
                 wander = ov.optBoolean("wander", false); wSpeed = (float) ov.optDouble("wspeed", 1); if (wSpeed <= 0) wSpeed = 1;
                 voice = ov.optString("voice", ""); vPitch = (float) ov.optDouble("pitch", 0); vSpeed = (float) ov.optDouble("speed", 1); vVol = (float) ov.optDouble("vol", .6);
+                Babble.quietInSilent = ov.optBoolean("quietSilent", false);
             }
         } catch (Exception e) { }
     }

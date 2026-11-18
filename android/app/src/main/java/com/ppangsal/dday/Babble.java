@@ -11,11 +11,13 @@ import java.util.Random;
 public class Babble {
     static final int SR = 22050;
     static AudioTrack last;
+    /** true면 무음·진동 모드일 때 소리를 안 내요. 기본은 false: 게임처럼 미디어 음량으로 소리가 나요 */
+    static boolean quietInSilent = false;
 
     static void play(Context ctx, String text, String type, float pitch, float speed, float vol) {
         if (type == null || type.isEmpty() || "none".equals(type) || text == null) return;
         AudioManager am = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
-        if (am != null && am.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) return;
+        if (quietInSilent && am != null && am.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) return;
         float base; int wave; float gain; int mode = 0; float fixDur = 0, ring = 0, crackle = 0, lpHz = 0;
         // wave: 0 사인 1 세모 2 네모 3 얇은 네모(8비트) 4 톱니 5 딸깍 / mode: 0 웅얼 1 같은 높이 2 번갈아 3 도미솔도
         switch (type) {
@@ -67,7 +69,7 @@ public class Babble {
         try {
             if (last != null) { try { last.stop(); last.release(); } catch (Exception e) { } }
             AudioTrack at = new AudioTrack.Builder()
-                .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
                 .setAudioFormat(new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(SR).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                 .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(n * 2).build();
             at.write(buf, 0, n);
