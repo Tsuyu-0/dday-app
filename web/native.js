@@ -74,7 +74,9 @@
   /* 폰 화면 위 캐릭터가 할 말: 그 캐릭터의 대사 + 다가오는 기념일 */
   function ovData(S, t, first) {
     if (!t) return null;
-    var Z = window.Zones, out = [], clean = function (x) { if (!x) return ""; var p = Z && Z.parseLine ? Z.parseLine(x, "speech") : { text: x }; return String(p.text || "").split("//")[0].trim(); };
+    var Z = window.Zones, out = [], clean = function (x) { if (!x) return "";
+      /* "//" 는 말풍선 나누기: 조각마다 정리해서 "//" 로 다시 이어 보내요 (폰에서 차례로 보여 줘요) */
+      return String(x).split("//").map(function (seg) { var p = Z && Z.parseLine ? Z.parseLine(seg, "speech") : { text: seg }; return String(p.text || "").trim(); }).filter(Boolean).join("//"); };
     (t.lines || []).forEach(function (x) { out.push(clean(x)); });
     Object.keys(t.zones || {}).forEach(function (k) { ((t.zones[k] || {}).lines || []).forEach(function (x) { out.push(clean(x)); }); });
     (t.idleLines || []).forEach(function (x) { out.push(clean(x)); });
@@ -87,6 +89,7 @@
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
       voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6,
       wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1,
+      idle: (t.idleLines || []).map(clean).filter(Boolean).slice(0, 60), idleVoice: !!t.idleVoice,
       zl: (function () { var o = {}; Object.keys(t.zones || {}).forEach(function (k) { var a = ((t.zones[k] || {}).lines || []).map(clean).filter(Boolean); if (a.length) o[k] = a; }); return o; })() };
   }
 

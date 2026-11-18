@@ -395,7 +395,7 @@
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (d) {
         var m = /(\d+)$/.exec(d.tag_name || ""), latest = m ? +m[1] : 0, asset = (d.assets || []).filter(function (a) { return (/Mac/i.test(navigator.platform || navigator.userAgent) ? /\.dmg$/ : /Setup\.exe$/).test(a.name); })[0];
-        updInfo = { newer: !!cur && latest > cur, ver: (d.tag_name || "").replace(/^v/, ""), cur: cur ? "1.0." + cur : "", url: (asset && asset.browser_download_url) || d.html_url, page: d.html_url };
+        updInfo = { newer: !!cur && latest > cur, ver: (d.tag_name || "").replace(/^v/, ""), cur: cur ? "1.0." + cur : "", url: (asset && asset.browser_download_url) || (/Mac/i.test(navigator.platform || navigator.userAgent) ? "https://github.com/Tsuyu-0/dday-app/releases/download/mac-latest/AnniversaryDday-mac.dmg" : d.html_url), page: d.html_url };
       }).catch(function () { updInfo = { err: true, cur: cur ? "1.0." + cur : "" }; })
       .then(function () { if (updInfo.newer) { sendTo("manager", "update", updInfo); S.settings.updSeen = updInfo.ver; updateTray(); } return updInfo; });
   }

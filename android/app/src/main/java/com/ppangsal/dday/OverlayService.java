@@ -112,6 +112,18 @@ public class OverlayService extends Service {
         walker.start();
     }
     void stopWalk() { if (walker != null) walker.cancel(); }
+    /* 가로·세로를 바꾸면 화면 크기가 달라져서 캐릭터가 밖으로 나갈 수 있어요: 화면 안으로 다시 넣어요 */
+    void keepInside() {
+        if (root == null || lp == null) return;
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        int rw = Math.max(root.getWidth(), sizePx), rh = Math.max(root.getHeight(), sizePx);
+        int nx = Math.max(0, Math.min(dm.widthPixels - rw, lp.x)), ny = Math.max(0, Math.min(dm.heightPixels - rh, lp.y));
+        if (nx != lp.x || ny != lp.y) { lp.x = nx; lp.y = ny; try { wm.updateViewLayout(root, lp); } catch (Exception e) { } }
+    }
+    @Override public void onConfigurationChanged(android.content.res.Configuration c) {
+        super.onConfigurationChanged(c); stopWalk();
+        if (h != null) { h.postDelayed(this::keepInside, 150); h.postDelayed(this::keepInside, 600); }
+    }
 
     static boolean canDraw(Context c) { return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c); }
 
@@ -140,7 +152,7 @@ public class OverlayService extends Service {
         String a = intent != null ? intent.getAction() : null;
         if (ACT_STOP.equals(a)) { getSharedPreferences(DdayWidget.PREFS, MODE_PRIVATE).edit().putBoolean("overlayOn", false).apply(); stopSelf(); return START_NOT_STICKY; }
         if (!canDraw(this)) { stopSelf(); return START_NOT_STICKY; }
-        if (root == null) { build(); load(); h.postDelayed(() -> say(greet.isEmpty() ? pick() : greet), 1200); h.postDelayed(wanderTick, 7000); }
+        if (root == null) { build(); load(); h.postDelayed(() -> say(greet.isEmpty() ? pick() : greet), 1200); h.postDelayed(wanderTick, 7000); h.postDelayed(idleTick, 25000); }
         else load();
         return START_STICKY;
     }
@@ -169,6 +181,7 @@ public class OverlayService extends Service {
         lp.x = sp.getInt("ovX", getResources().getDisplayMetrics().widthPixels - sizePx - dp(16));
         lp.y = sp.getInt("ovY", dp(140));
         wm.addView(root, lp);
+        h.postDelayed(this::keepInside, 400);
 
         img.setPivotY(sizePx); img.setPivotX(sizePx / 2f);
         breathe = ObjectAnimator.ofFloat(img, "scaleY", 1f, 0.975f);
@@ -222,7 +235,16 @@ public class OverlayService extends Service {
         bub.animate().alpha(0f).scaleX(.9f).scaleY(.9f).setDuration(160).withEndAction(() -> { bub.setVisibility(View.GONE); bub.setAlpha(1f); bub.setScaleX(1f); bub.setScaleY(1f); }).start();
     };
     Runnable typer;
-    void say(String s) {
+    /* "//" 로 나눈 대사는 말풍선을 하나씩 차례로 보여 줘요 */
+    java.util.List<String> queue = new java.util.ArrayList<>(); boolean qQuiet = false;
+    final Runnable nextPart = () -> { if (!queue.isEmpty()) sayOne(queue.remove(0), qQuiet); };
+    void say(String s) { say(s, false); }
+    void say(String s, boolean quiet) {
+        if (s == null) return; h.removeCallbacks(nextPart); queue.clear(); qQuiet = quiet;
+        for (String part : s.split("//")) { String p = part.trim(); if (!p.isEmpty()) queue.add(p); }
+        if (!queue.isEmpty()) sayOne(queue.remove(0), quiet);
+    }
+    void sayOne(String s, boolean quiet) {
         stopWalk(); quietUntil = System.currentTimeMillis() + 4000;
         if (bub == null || s == null || s.isEmpty()) return;
         h.removeCallbacks(hideBub); if (typer != null) h.removeCallbacks(typer);
@@ -236,7 +258,7 @@ public class OverlayService extends Service {
         bub.setPivotX(bub.getWidth() > 0 ? bub.getWidth() / 2f : dp(60)); bub.setPivotY(dp(40));
         bub.setScaleX(.6f); bub.setScaleY(.6f); bub.setAlpha(0f);
         bub.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).setInterpolator(new android.view.animation.OvershootInterpolator(2.2f)).start();
-        Babble.play(this, full, voice, vPitch, vSpeed, vVol);
+        if (!quiet) Babble.play(this, full, voice, vPitch, vSpeed, vVol);
         final int step = Math.max(28, (int) (48 / Math.max(.5f, vSpeed)));
         final int[] k = { 0 };
         typer = new Runnable() { @Override public void run() {
@@ -247,9 +269,19 @@ public class OverlayService extends Service {
             if (k[0] < full.length()) h.postDelayed(this, step);
         } };
         h.postDelayed(typer, 120);
-        h.postDelayed(hideBub, Math.max(2600, 1200 + full.length() * 120L));
+        long dur = Math.max(2600, 1200 + full.length() * 120L);
+        if (!queue.isEmpty()) h.postDelayed(nextPart, Math.max(1500, 700 + full.length() * 90L));
+        else h.postDelayed(hideBub, dur);
     }
 
+    /* 혼잣말: 가만히 있을 때 가끔 (말소리는 [가만히 있을 때도 말소리 내기]를 켰을 때만) */
+    List<String> idle = new ArrayList<>(); boolean idleVoice = false;
+    final Runnable idleTick = new Runnable() { @Override public void run() {
+        h.postDelayed(this, 40000 + rnd.nextInt(50000));
+        if (root == null || idle.isEmpty() || touching || walker != null || System.currentTimeMillis() < quietUntil) return;
+        if (bub.getVisibility() == View.VISIBLE || menu.getVisibility() == View.VISIBLE) return;
+        say(idle.get(rnd.nextInt(idle.size())), !idleVoice);
+    } };
     String pick() { if (lines.isEmpty()) return name.isEmpty() ? "불렀어?" : "불렀어?"; return lines.get(rnd.nextInt(lines.size())); }
 
     /** 앱이 저장해 둔 그림 · 대사를 다시 읽어요 */
@@ -265,6 +297,8 @@ public class OverlayService extends Service {
                 zmap = ov.optString("zmap", ""); zoneLines.clear();
                 JSONObject zl = ov.optJSONObject("zl");
                 if (zl != null) { java.util.Iterator<String> it = zl.keys(); while (it.hasNext()) { String k = it.next(); JSONArray a = zl.optJSONArray(k); List<String> L = new ArrayList<>(); if (a != null) for (int i = 0; i < a.length(); i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) L.add(x); } if (!L.isEmpty()) zoneLines.put(k, L); } }
+                idle.clear(); idleVoice = ov.optBoolean("idleVoice", false);
+                JSONArray il = ov.optJSONArray("idle"); if (il != null) for (int i = 0; i < il.length(); i++) { String x = il.optString(i, "").trim(); if (!x.isEmpty()) idle.add(x); }
                 JSONArray ls = ov.optJSONArray("lines");
                 if (ls != null) for (int i = 0; i < ls.length(); i++) { String s = ls.optString(i, "").trim(); if (!s.isEmpty()) lines.add(s); }
                 greet = ov.optString("greet", ""); name = ov.optString("name", "");

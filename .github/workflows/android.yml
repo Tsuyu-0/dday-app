@@ -141,3 +141,10 @@ jobs:
         with:
           tag_name: v1.0.${{ env.BUILD }}
           files: out/AnniversaryDday-mac.dmg
+
+      - name: 사이트 맥 버튼 자리(mac-latest)도 새 파일로
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view mac-latest -R "${{ github.repository }}" >/dev/null 2>&1 || gh release create mac-latest -R "${{ github.repository }}" --title "맥 최신 버전" --notes "맥(dmg) 최신 빌드" --latest=false --target "${GITHUB_SHA}"
+          gh release upload mac-latest out/AnniversaryDday-mac.dmg -R "${{ github.repository }}" --clobber

@@ -1,0 +1,35 @@
+name: 맥 최신 파일 자리 맞추기
+
+# 맥 빌드는 깃허브의 맥 기계를 기다리다 취소될 때가 있어요.
+# 그래도 사이트의 맥 버튼이 404가 나지 않도록, 가장 최근에 만들어진 맥 파일을
+# 항상 'mac-latest' 릴리스에 복사해 둬요 (리눅스 기계라 바로 돌아요).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["앱 만들기 (안드로이드 · PC)"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 가장 최근 맥 파일 찾아서 mac-latest 에 올리기
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          TAG=$(gh api "repos/$REPO/releases?per_page=40" -q '[.[] | select(.draft==false and .tag_name!="mac-latest" and .tag_name!="mac-test") | select([.assets[].name] | index("AnniversaryDday-mac.dmg"))][0].tag_name')
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then echo "맥 파일이 있는 릴리스가 아직 없어요"; exit 0; fi
+          echo "가장 최근 맥 파일: $TAG"
+          gh release download "$TAG" -R "$REPO" -p AnniversaryDday-mac.dmg -D out
+          if ! gh release view mac-latest -R "$REPO" >/dev/null 2>&1; then
+            gh release create mac-latest -R "$REPO" --title "맥 최신 버전" --notes "맥(dmg) 최신 빌드가 항상 여기 있어요. 사이트의 맥 다운로드 버튼이 이 파일로 연결돼요." --latest=false --target "${GITHUB_SHA}"
+          fi
+          gh release upload mac-latest out/AnniversaryDday-mac.dmg -R "$REPO" --clobber
+          gh release edit mac-latest -R "$REPO" --notes "맥(dmg) 최신 빌드가 항상 여기 있어요. 지금 파일: $TAG"

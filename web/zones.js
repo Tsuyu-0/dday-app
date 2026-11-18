@@ -32,7 +32,23 @@ Z.ckHTML=function(t){
 
 /* 눌린 곳 지도 (200×200, 0 없음 1 머리 2 얼굴 3 몸) */
 var N=200;
-function load(src){ return new Promise(function(res){ if(!src) return res(null); var i=new Image(); i.onload=function(){res(i)}; i.onerror=function(){res(null)}; /* Tauri asset URLs are cross-origin: request CORS before assigning src so canvas pixels remain readable. */ if(/^(?:https?:|asset:)/i.test(src)) i.crossOrigin="anonymous"; i.src=src; }); }
+var ASSET_RE=/^(?:https?:\/\/asset\.localhost|asset:\/\/localhost)\//;
+function loadRaw(src,cors){ return new Promise(function(res){ var i=new Image(); i.onload=function(){res(i)}; i.onerror=function(){res(null)}; if(cors) i.crossOrigin="anonymous"; i.src=src; }); }
+/* 부위 지도용 그림 읽기. 윈도우판은 저장된 그림이 '다른 출처' 주소라 그대로 그리면 픽셀을 못 읽어요:
+   1) 앱이 저장한 그림이면 파일을 직접 읽어 data: 로  2) 아니면 CORS로  3) 그래도 안 되면 그냥 */
+function load(src){
+  if(!src) return Promise.resolve(null);
+  var T=window.__TAURI__;
+  if(T&&T.core&&ASSET_RE.test(src)){
+    var path; try{ path=decodeURIComponent(src.replace(ASSET_RE,"").split("?")[0]); }catch(e){ path=null; }
+    if(path&&!/^[A-Za-z]:[\\/]/.test(path)&&path.charAt(0)!=="/") path="/"+path; // 맥·리눅스는 / 로 시작
+    var ext=(String(path).split(".").pop()||"").toLowerCase(), mime=ext==="jpg"||ext==="jpeg"?"image/jpeg":ext==="webp"?"image/webp":ext==="gif"?"image/gif":"image/png";
+    if(path) return T.core.invoke("read_b64",{path:path}).then(function(b){ return b?loadRaw("data:"+mime+";base64,"+b,false):null; }).catch(function(){ return null; })
+      .then(function(im){ return im||loadRaw(src,true); }).then(function(im){ return im||loadRaw(src,false); });
+  }
+  if(/^(?:https?:|asset:)/i.test(src)) return loadRaw(src,true).then(function(im){ return im||loadRaw(src,false); });
+  return loadRaw(src,false);
+}
 function alpha(im){
   if(!im) return null;
   var c=document.createElement("canvas"); c.width=c.height=N; var x=c.getContext("2d");
