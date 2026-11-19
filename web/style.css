@@ -773,6 +773,7 @@ body.dark .fb-note{background:rgba(255,170,60,.12);color:#ffcf8a}
 @media (max-width:720px){.tr-stats{grid-template-columns:repeat(2,1fr)}.tr-al{min-width:0}}
 /* 시간 기록표 (달력 옆) */
 .agenda .tt{margin-top:12px;padding:16px 16px 14px}
+.agenda .agin>.tt{margin-top:12px}
 .tt-h{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:12px}
 .tt-h>div:first-child{display:flex;flex-direction:column;gap:2px}
 .tt-t{font-size:14px;font-weight:800}.tt-h small{font-size:11.5px;color:var(--dim)}
@@ -799,3 +800,22 @@ body.dark .fb-note{background:rgba(255,170,60,.12);color:#ffcf8a}
 .tt-leg{display:flex;flex-direction:column;gap:6px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .tt-l{display:grid;grid-template-columns:10px 1fr auto 34px;align-items:center;gap:8px;font-size:12.5px}
 .tt-l i{width:10px;height:10px;border-radius:3px}.tt-l span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tt-l b{font-weight:700}.tt-l small{color:var(--dim);text-align:right;font-size:11px}
+
+/* 오른쪽 칸: [이날 | 시간 기록표] 탭. 넓은 화면에선 달력 높이에 딱 맞춰요 */
+.ag-tabs{display:flex;gap:4px;padding:4px;border-radius:14px;background:rgba(127,127,127,.08);margin-bottom:10px;flex:none}
+.ag-tabs button{flex:1;height:32px;border:0;border-radius:10px;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--dim);cursor:pointer}
+.ag-tabs button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(20,30,50,.1)}
+.agenda.has-tt .tt{margin-top:0}
+@media (min-width:981px){
+  .calwrap:has(.agenda.has-tt){align-items:stretch}
+  .agenda.has-tt{position:relative;top:0;min-height:480px}
+  .agenda.has-tt .agin{position:absolute;inset:0;display:flex;flex-direction:column}
+  .agenda.has-tt .agin>.box{margin:0;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:auto;scrollbar-width:thin}
+  .agenda.has-tt .ag-box textarea.in{flex:1 1 auto;min-height:90px;resize:none}
+  .agenda.has-tt .ag-box .agbtn{flex:none}
+  .agenda.has-tt .tt .tt-g{flex:1 1 auto;min-height:0}
+  .agenda.has-tt .tt .tt-r{height:auto;flex:1 1 0;min-height:9px;align-items:stretch}
+  .agenda.has-tt .tt .tt-hl{align-items:center}
+  .agenda.has-tt .tt .tt-r.tt-head{flex:none;height:12px}
+  .agenda.has-tt .tt .tt-leg{flex:none}
+}

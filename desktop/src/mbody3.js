@@ -426,7 +426,7 @@ function pairView(){
 }
 
 /* ---------- 작업 기록 (PC): 고른 프로그램을 쓰는 동안만 시간을 재서 레벨 · 보상으로 ---------- */
-var TRD=null, TRT=null, TRCOL=["#4f7cff","#f06292","#2bb3a3","#ff9f43","#9b6bff","#3aa0d8","#e0a020","#5b6b80"];
+var AGTAB=(function(){ try{ return localStorage.getItem("dd-agtab")||"day"; }catch(e){ return "day"; } })(), TRD=null, TRT=null, TRCOL=["#4f7cff","#f06292","#2bb3a3","#ff9f43","#9b6bff","#3aa0d8","#e0a020","#5b6b80"];
 function trLoad(){ if(!api.trackGet) return; api.trackGet().then(function(D){ TRD=D||{}; if(VIEW==="track"&&!document.activeElement.matches("input[data-trl]")) render(); if(VIEW==="cal"){ var el=$("#trtab"); if(el&&DAYSEL) el.outerHTML=ttHTML(DAYSEL); } }); }
 function trColor(i){ return TRCOL[i%TRCOL.length]; }
 function trackView(){
@@ -610,8 +610,12 @@ function agendaHTML(k){
   var rows=an.map(function(x){ var sid=AN.starOf(S,x.a); return '<button class="item" data-ann="'+esc(x.a.id)+'"><span class="bar" style="background:#ff5c93"></span>'+(sid?avOf(sid):"")+'<span class="mid"><b>'+esc(AN.whoName(S,x.a.who))+" · "+esc(x.a.title)+(x.n.label!==x.a.title?" "+esc(x.n.label):"")+"</b><small>"+repName(x.a)+"</small></span></button>"; }).join("")+
     on.events.map(function(e){ var c=AN.catOf(e.cat), star=e.star||(e.who&&e.who.type==="token"?e.who.id:null); return '<button class="item" data-ev="'+esc(e.id)+'"><span class="bar" style="background:'+c[2]+'"></span>'+(star?avOf(star):"")+'<span class="mid"><b>'+esc(e.title)+"</b><small>"+(e.time?e.time+" · ":"")+c[1]+"</small></span></button>"; }).join("");
   var dd=AN.eventDays({date:k});
-  return '<aside class="agenda"><div class="box"><span class="tape r"></span><div class="dt2">'+(dd===0?"오늘":ddText(dd))+" · "+WD[d.getDay()]+'요일</div><div class="dt1">'+(d.getMonth()+1)+"월 "+d.getDate()+"일</div>"+(rows||'<div class="emp">아직 아무 일도 없어요.</div>')+
-    '<div class="agbtn"><button data-act="ag-ev">＋ 일정</button><button data-act="ag-an">＋ 기념일</button></div><textarea class="in" id="ag-memo" placeholder="이날의 메모, 일기, 감상…">'+esc((S.notes||{})[k]||"")+"</textarea></div>"+ttHTML(k)+"</aside>";
+  var tt=ttHTML(k);
+  var box='<div class="box ag-box"><span class="tape r"></span><div class="dt2">'+(dd===0?"오늘":ddText(dd))+" · "+WD[d.getDay()]+'요일</div><div class="dt1">'+(d.getMonth()+1)+"월 "+d.getDate()+"일</div>"+(rows||'<div class="emp">아직 아무 일도 없어요.</div>')+
+    '<div class="agbtn"><button data-act="ag-ev">＋ 일정</button><button data-act="ag-an">＋ 기념일</button></div><textarea class="in" id="ag-memo" placeholder="이날의 메모, 일기, 감상…">'+esc((S.notes||{})[k]||"")+"</textarea></div>";
+  if(!tt) return '<aside class="agenda">'+box+'</aside>';
+  var tab=AGTAB==="time"?"time":"day";
+  return '<aside class="agenda has-tt"><div class="agin"><div class="ag-tabs"><button data-act="agtab" data-t="day"'+(tab==="day"?' class="on"':"")+'>이날</button><button data-act="agtab" data-t="time"'+(tab==="time"?' class="on"':"")+'>시간 기록표</button></div>'+(tab==="time"?tt:box)+'</div></aside>';
 }
 function stkById(id){ var md=monthData(curYM()); return (md.stickers||[]).filter(function(s){return s.id===id})[0]; }
 function stkHTML(s){
@@ -935,6 +939,7 @@ app.addEventListener("click",function(e){
     pq.dialogs=D2; delete pq.talks; saveSoon(true); render();
     if(a==="dladd"||a==="dlgadd"){ var ii=a==="dlgadd"?D2.length-1:i2, rows=$$('[data-pair="'+pq.id+'"] [data-dlg="'+ii+'"] .dl-t'), tgt=a==="dlgadd"?rows[0]:rows[rows.length-1]; if(tgt) tgt.focus(); }
     return; }
+  if(a==="agtab"){ AGTAB=b.dataset.t; try{ localStorage.setItem("dd-agtab",AGTAB); }catch(e){} render(); return; }
   if(a==="tradd"&&TRD){ var ap=(TRD.apps||[]).slice(); ap.push({exe:b.dataset.exe,label:String(b.dataset.exe).replace(/\.exe$/i,""),color:trColor(ap.length)}); trSetApps(ap); return; }
   if(a==="trrm"&&TRD){ var ap2=(TRD.apps||[]).slice(); var gone=ap2.splice(+b.dataset.i,1)[0]; if(gone&&!confirm("'"+(gone.label||gone.exe)+"' 재기를 그만할까요? 지금까지의 기록은 남아요.")) return; trSetApps(ap2); return; }
   if(a==="ptalk"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",Date.now()); },300); return; }
