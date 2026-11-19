@@ -458,16 +458,34 @@ function trackView(){
 /* 시간 기록표 (모트모트처럼): 하루 24시간 × 10분 칸. 그 10분에 가장 오래 쓴 프로그램 색으로 칠해요 */
 function ttHTML(k){
   if(!window.__TAURI__||!api.trackGet) return "";
-  var D=TRD; if(!D) return '<div class="box tt" id="trtab"><div class="box-t">시간 기록표</div><div class="emp">불러오는 중…</div></div>';
-  var apps=D.apps||[], col={}; apps.forEach(function(a,i){ col[a.exe]=a.color||trColor(i); });
-  var day=AN.parseYmd(k); if(!day) return ""; var t0=day.getTime()/1000, blk={}, per={}, tot=0;
+  var D=TRD; if(!D) return '<div class="box tt" id="trtab"><div class="tt-h"><span class="tt-t">시간 기록표</span></div><div class="tt-emp">불러오는 중…</div></div>';
+  var TK=AN.track, apps=D.apps||[], col={}; apps.forEach(function(a,i){ col[a.exe]=a.color||trColor(i); });
+  var day=AN.parseYmd(k); if(!day) return ""; var t0=day.getTime()/1000, blk={}, per={}, tot=0, bestRun=0;
   var ses=(D.log||[]).filter(function(l){ return l[2]+l[3]>t0&&l[2]<t0+86400; }).map(function(l){ return [l[1],l[2],l[3]]; });
   if(D.live&&D.live.len) ses.push([D.live.exe,Math.floor(Date.now()/1000)-D.live.len,D.live.len]);
-  ses.forEach(function(x){ var a=Math.max(x[1],t0), b=Math.min(x[1]+x[2],t0+86400); while(a<b){ var bi=Math.floor((a-t0)/600), e=Math.min(b,t0+(bi+1)*600), sec=e-a; (blk[bi]=blk[bi]||{})[x[0]]=(blk[bi][x[0]]||0)+sec; per[x[0]]=(per[x[0]]||0)+sec; tot+=sec; a=e; } });
-  var rows="", h0=6;
-  for(var r=0;r<24;r++){ var hr=(h0+r)%24, cells=""; for(var c=0;c<6;c++){ var bi=hr*6+c, m=blk[bi], st=""; if(m){ var best=null,bs=0,sum=0; Object.keys(m).forEach(function(e){ sum+=m[e]; if(m[e]>bs){bs=m[e];best=e;} }); st=' style="background:'+esc(col[best]||"#8a8a90")+';opacity:'+Math.max(.35,Math.min(1,sum/600)).toFixed(2)+'" title="'+esc(AN.track.label(D,best))+' · '+AN.track.fmt(sum)+'"'; } cells+='<i'+st+'></i>'; } rows+='<div class="tt-r"><span>'+hr+'</span>'+cells+'</div>'; }
-  var leg=Object.keys(per).sort(function(a,b){ return per[b]-per[a]; }).map(function(e){ return '<span class="tt-l"><i style="background:'+esc(col[e]||"#8a8a90")+'"></i>'+esc(AN.track.label(D,e))+' <b>'+AN.track.fmt(per[e])+'</b></span>'; }).join("");
-  return '<div class="box tt" id="trtab"><div class="tt-h"><span class="box-t" style="margin:0">시간 기록표</span><b>'+AN.track.fmt(tot)+'</b></div>'+(apps.length?"":'<p class="note" style="margin:0 0 8px">[기록]에서 잴 프로그램을 고르면 쓴 시간이 여기 칠해져요.</p>')+'<div class="tt-g">'+rows+'</div>'+(leg?'<div class="tt-leg">'+leg+'</div>':"")+'</div>';
+  ses.forEach(function(x){ bestRun=Math.max(bestRun,x[2]); var a=Math.max(x[1],t0), b=Math.min(x[1]+x[2],t0+86400); while(a<b){ var bi=Math.floor((a-t0)/600), e=Math.min(b,t0+(bi+1)*600), sec=e-a; (blk[bi]=blk[bi]||{})[x[0]]=(blk[bi][x[0]]||0)+sec; per[x[0]]=(per[x[0]]||0)+sec; tot+=sec; a=e; } });
+  var now=new Date(), isToday=AN.ymd(now)===k, nowBi=isToday?now.getHours()*6+Math.floor(now.getMinutes()/10):-1;
+  /* 새벽(0~5시)은 기록이 있을 때만 보여요 */
+  var night=false; for(var q=0;q<36;q++) if(blk[q]) { night=true; break; }
+  var hours=[]; for(var h=6;h<24;h++) hours.push(h); if(night) for(var h2=0;h2<6;h2++) hours.push(h2);
+  var cellOf=function(bi){
+    var m=blk[bi], cls="tt-c"+(bi===nowBi?" now":"")+(nowBi>=0&&bi>nowBi?" fut":"");
+    if(!m) return '<i class="'+cls+'"></i>';
+    var best=null,bs=0,sum=0; Object.keys(m).forEach(function(e){ sum+=m[e]; if(m[e]>bs){bs=m[e];best=e;} });
+    var full=sum>=540, prevFull=blk[bi-1]&&bi%6!==0, nextFull=blk[bi+1]&&bi%6!==5&&full;
+    return '<i class="'+cls+' on'+(prevFull?" jl":"")+(nextFull?" jr":"")+'" style="--c:'+esc(col[best]||"#8a8a90")+';--f:'+Math.max(.18,Math.min(1,sum/600)).toFixed(2)+'" title="'+String(Math.floor(bi/6)).padStart(2,"0")+":"+(bi%6)+'0 · '+esc(TK.label(D,best))+' '+TK.fmt(sum)+'"></i>';
+  };
+  var rows=hours.map(function(hr){ var c=""; for(var x=0;x<6;x++) c+=cellOf(hr*6+x); return '<div class="tt-r'+(isToday&&now.getHours()===hr?" cur":"")+(hr===12||hr===18||hr===0?" gap":"")+'"><span class="tt-hl"><b>'+hr+'</b></span><div class="tt-cs">'+c+'</div></div>'; }).join("");
+  var order=Object.keys(per).sort(function(a,b){ return per[b]-per[a]; });
+  var share=tot?'<div class="tt-share">'+order.map(function(e){ return '<i style="flex:'+per[e]+';background:'+esc(col[e]||"#8a8a90")+'"></i>'; }).join("")+'</div>':"";
+  var leg=order.map(function(e){ return '<div class="tt-l"><i style="background:'+esc(col[e]||"#8a8a90")+'"></i><span>'+esc(TK.label(D,e))+'</span><b>'+TK.fmt(per[e])+'</b><small>'+Math.round(per[e]/tot*100)+'%</small></div>'; }).join("");
+  var d=AN.parseYmd(k);
+  return '<div class="box tt" id="trtab">'+
+    '<div class="tt-h"><div><span class="tt-t">시간 기록표</span><small>'+(d.getMonth()+1)+'월 '+d.getDate()+'일'+(isToday?" · 오늘":"")+'</small></div><div class="tt-sum"><b>'+(tot?TK.fmt(tot):"0분")+'</b><small>'+(bestRun?"최고 몰입 "+TK.fmt(bestRun):"집중 시간")+'</small></div></div>'+
+    share+
+    (apps.length?"":'<p class="tt-hint">[기록]에서 잴 프로그램을 고르면 쓴 시간이 여기 칠해져요.</p>')+
+    '<div class="tt-g'+(tot?"":" empty")+'"><div class="tt-r tt-head"><span class="tt-hl"></span><div class="tt-cs"><small>0</small><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div></div>'+rows+(tot?"":'<div class="tt-emp">이날은 기록이 없어요</div>')+'</div>'+
+    (leg?'<div class="tt-leg">'+leg+'</div>':"")+'</div>';
 }
 function trSetApps(apps){ TRD.apps=apps; api.trackSet("apps",apps).then(trLoad); render(); }
 function setView(){
