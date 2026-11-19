@@ -453,6 +453,8 @@
   function managerShown() { return true; }
   setInterval(trackCheck, 60000); setTimeout(trackCheck, 20000);
   handlers["track:get"] = function () { return invoke("track_get"); };
+  handlers["track:running"] = function () { return invoke("track_running"); };
+  handlers["track:front"] = function () { return invoke("track_front"); };
   handlers["track:set"] = function (k, v) { return invoke("track_set", { key: String(k), val: v }).then(function (r) { setTimeout(trackCheck, 500); return r; }); };
 
   /* ---------- 관리 창 ---------- */

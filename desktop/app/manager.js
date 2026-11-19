@@ -473,8 +473,8 @@ function pairView(){
 }
 
 /* ---------- 작업 기록 (PC): 고른 프로그램을 쓰는 동안만 시간을 재서 레벨 · 보상으로 ---------- */
-var AGTAB=(function(){ try{ return localStorage.getItem("dd-agtab")||"day"; }catch(e){ return "day"; } })(), TRD=null, TRT=null, TRCOL=["#4f7cff","#f06292","#2bb3a3","#ff9f43","#9b6bff","#3aa0d8","#e0a020","#5b6b80"];
-function trLoad(){ if(!api.trackGet) return; api.trackGet().then(function(D){ TRD=D||{}; if(VIEW==="track"&&!document.activeElement.matches("input[data-trl]")) render(); if(VIEW==="cal"){ var el=$("#trtab"); if(el&&DAYSEL) el.outerHTML=ttHTML(DAYSEL); } }); }
+var TRPICK=false, TRRUN=null, TRQ="", TRCAP=0, AGTAB=(function(){ try{ return localStorage.getItem("dd-agtab")||"day"; }catch(e){ return "day"; } })(), TRD=null, TRT=null, TRCOL=["#4f7cff","#f06292","#2bb3a3","#ff9f43","#9b6bff","#3aa0d8","#e0a020","#5b6b80"];
+function trLoad(){ if(!api.trackGet) return; api.trackGet().then(function(D){ TRD=D||{}; if(VIEW==="track"&&!document.activeElement.matches("input[data-trl],#tr-q")) render(); if(VIEW==="cal"){ var el=$("#trtab"); if(el&&DAYSEL) el.outerHTML=ttHTML(DAYSEL); } }); }
 function trColor(i){ return TRCOL[i%TRCOL.length]; }
 function trackView(){
   var TK=AN.track, D=TRD||{}, apps=D.apps||[], sm=TK.sum(D), today=D.today||AN.ymd(new Date()), td=(D.days||{})[today]||{}, h='<div class="wrap"><div class="h1">작업 기록</div><p class="lead">고른 프로그램을 쓰는 동안만 시간을 재요. 마우스 · 키보드를 5초 넘게 안 만지면 멈추고, 이어서 쓴 시간이 집중 시간이 돼요.</p>';
@@ -487,8 +487,20 @@ function trackView(){
   /* 잴 프로그램 */
   h+='<div class="box"><div class="box-t">잴 프로그램</div>';
   h+=apps.length?'<div class="tr-apps">'+apps.map(function(a,i){ var m=Math.floor((sm.byApp[a.exe]||0)/60), l=TK.level(m); return '<div class="tr-app"><span class="tr-dot" style="background:'+esc(a.color||trColor(i))+'"></span><input class="in" data-trl="'+i+'" value="'+esc(a.label||TK.label(D,a.exe))+'" title="'+esc(a.exe)+'"><span class="tr-al">Lv.'+l.lv+' · 오늘 '+TK.fmt((td[a.exe]||{}).t||0)+'</span><button class="ib" data-act="trrm" data-i="'+i+'" title="빼기">×</button></div>'; }).join("")+'</div>':'<p class="note" style="margin:0 0 8px">아직 고른 프로그램이 없어요.</p>';
-  var seen=(D.seen||[]).filter(function(x){ return !apps.some(function(a){ return a.exe.toLowerCase()===String(x).toLowerCase(); }); });
-  h+='<div class="lbl">최근에 쓴 프로그램에서 고르기</div>'+(seen.length?'<div class="chips">'+seen.map(function(x){ return '<button data-act="tradd" data-exe="'+esc(x)+'">+ '+esc(String(x).replace(/\.exe$/i,""))+'</button>'; }).join("")+'</div>':'<p class="note" style="margin:0">잴 프로그램을 한 번 열어서 잠깐 쓰고 돌아오면 여기에 나와요.</p>');
+  var has=function(x){ return apps.some(function(a){ return a.exe.toLowerCase()===String(x).toLowerCase(); }); };
+  if(!TRPICK) h+='<button class="btn" data-act="trpick" style="margin-top:6px">＋ 잴 프로그램 추가</button>';
+  else{
+    var q=(TRQ||"").toLowerCase(), run=(TRRUN||[]).filter(function(r){ return !has(r.exe)&&(!q||(r.name+" "+r.exe).toLowerCase().indexOf(q)>=0); });
+    var seen=(D.seen||[]).filter(function(x){ return !has(x)&&!(TRRUN||[]).some(function(r){ return r.exe.toLowerCase()===String(x).toLowerCase(); })&&(!q||String(x).toLowerCase().indexOf(q)>=0); });
+    h+='<div class="tr-pick"><div class="tr-ph"><b>잴 프로그램 고르기</b><button class="lk" data-act="trpickx">닫기</button></div>'+
+      '<input class="in" id="tr-q" placeholder="이름으로 찾기 (예: 클립, 포토샵)" value="'+esc(TRQ||"")+'">'+
+      '<div class="lbl">지금 켜져 있는 프로그램 <button class="lk" data-act="trrun" style="margin-left:6px">새로 고침</button></div>'+
+      (TRRUN==null?'<p class="note">찾는 중…</p>':run.length?'<div class="tr-run">'+run.map(function(r){ return '<button class="tr-ri" data-act="tradd" data-exe="'+esc(r.exe)+'" data-name="'+esc(r.name)+'"><b>'+esc(r.name)+'</b><small>'+esc(r.exe)+'</small><span>＋ 추가</span></button>'; }).join("")+'</div>':'<p class="note">'+(q?"찾는 이름이 없어요.":"켜져 있는 프로그램이 없어요.")+' 잴 프로그램을 먼저 켜 두고 [새로 고침]을 눌러 주세요.</p>')+
+      (seen.length?'<div class="lbl">최근에 쓴 프로그램</div><div class="chips">'+seen.map(function(x){ return '<button data-act="tradd" data-exe="'+esc(x)+'">+ '+esc(String(x).replace(/\.exe$/i,""))+'</button>'; }).join("")+'</div>':"")+
+      '<div class="lbl">목록에 없으면</div><div class="tr-alt"><button class="btn" data-act="trcap">'+(TRCAP?TRCAP+"초 안에 잴 프로그램 창을 눌러 주세요…":"5초 뒤 맨 앞 프로그램 잡기")+'</button>'+
+      (/Mac/i.test(navigator.platform)?"":'<label class="btn">실행 파일(.exe)에서 고르기<input type="file" accept=".exe" id="tr-file" hidden></label>')+'</div>'+
+      '<p class="note" style="margin:8px 0 0">[5초 뒤 잡기]를 누르고 잴 프로그램 창을 한 번 클릭하면 그 프로그램이 추가돼요.</p></div>';
+  }
   h+='<div class="tiles" style="margin-top:12px">'+tile("s-trtalk",(S.settings||{}).trackTalk!==false,"캐릭터가 응원해요","30분마다 · 레벨이 오르거나 보상을 받으면 말풍선으로 알려 줘요")+'</div></div>';
   /* 최근 7일 */
   var days=[], mx=1; for(var k=6;k>=0;k--){ var dt=AN.parseYmd(today)||new Date(); dt.setDate(dt.getDate()-k); var y=AN.ymd(dt), dd=(D.days||{})[y]||{}, tot=0; Object.keys(dd).forEach(function(e){ tot+=dd[e].t||0; }); mx=Math.max(mx,tot); days.push({y:y,dd:dd,tot:tot,dt:dt}); }
@@ -534,6 +546,8 @@ function ttHTML(k){
     '<div class="tt-g'+(tot?"":" empty")+'"><div class="tt-r tt-head"><span class="tt-hl"></span><div class="tt-cs"><small>0</small><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div></div>'+rows+(tot?"":'<div class="tt-emp">이날은 기록이 없어요</div>')+'</div>'+
     (leg?'<div class="tt-leg">'+leg+'</div>':"")+'</div>';
 }
+function trRun(){ if(!api.trackRunning) { TRRUN=[]; return; } api.trackRunning().then(function(r){ TRRUN=Array.isArray(r)?r.sort(function(a,b){ return String(a.name).localeCompare(String(b.name),"ko"); }):[]; if(VIEW==="track") render(); }).catch(function(){ TRRUN=[]; if(VIEW==="track") render(); }); }
+function trAdd(exe,name){ if(!TRD||!exe) return; var ap=(TRD.apps||[]).slice(); if(ap.some(function(a){ return a.exe.toLowerCase()===String(exe).toLowerCase(); })) return; ap.push({exe:exe,label:name||String(exe).replace(/\.exe$/i,""),color:trColor(ap.length)}); TRPICK=false; trSetApps(ap); }
 function trSetApps(apps){ TRD.apps=apps; api.trackSet("apps",apps).then(trLoad); render(); }
 function setView(){
   var c=S.settings||{}, th=c.theme||"system";
@@ -987,7 +1001,11 @@ app.addEventListener("click",function(e){
     if(a==="dladd"||a==="dlgadd"){ var ii=a==="dlgadd"?D2.length-1:i2, rows=$$('[data-pair="'+pq.id+'"] [data-dlg="'+ii+'"] .dl-t'), tgt=a==="dlgadd"?rows[0]:rows[rows.length-1]; if(tgt) tgt.focus(); }
     return; }
   if(a==="agtab"){ AGTAB=b.dataset.t; try{ localStorage.setItem("dd-agtab",AGTAB); }catch(e){} render(); return; }
-  if(a==="tradd"&&TRD){ var ap=(TRD.apps||[]).slice(); ap.push({exe:b.dataset.exe,label:String(b.dataset.exe).replace(/\.exe$/i,""),color:trColor(ap.length)}); trSetApps(ap); return; }
+  if(a==="tradd"&&TRD){ trAdd(b.dataset.exe,b.dataset.name); return; }
+  if(a==="trpick"){ TRPICK=true; TRQ=""; trRun(); render(); return; }
+  if(a==="trpickx"){ TRPICK=false; render(); return; }
+  if(a==="trrun"){ TRRUN=null; trRun(); render(); return; }
+  if(a==="trcap"&&!TRCAP&&api.trackFront){ TRCAP=5; render(); var iv=setInterval(function(){ TRCAP--; if(TRCAP>0){ var bb=$('[data-act="trcap"]'); if(bb) bb.textContent=TRCAP+"초 안에 잴 프로그램 창을 눌러 주세요…"; return; } clearInterval(iv); api.trackFront().then(function(ex){ TRCAP=0; if(!ex||/anniversary|기념일/i.test(ex)){ toast("다른 프로그램 창을 눌러야 잡혀요. 다시 해 볼까요?"); render(); return; } var nm=((TRRUN||[]).filter(function(r){ return r.exe.toLowerCase()===String(ex).toLowerCase(); })[0]||{}).name; trAdd(ex,nm); toast("'"+(nm||String(ex).replace(/\.exe$/i,""))+"' 추가했어요"); }).catch(function(){ TRCAP=0; render(); }); },1000); return; }
   if(a==="trrm"&&TRD){ var ap2=(TRD.apps||[]).slice(); var gone=ap2.splice(+b.dataset.i,1)[0]; if(gone&&!confirm("'"+(gone.label||gone.exe)+"' 재기를 그만할까요? 지금까지의 기록은 남아요.")) return; trSetApps(ap2); return; }
   if(a==="ptalk"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",Date.now()); },300); return; }
   if(a==="pnew"){ S.pairs.push({id:uid("p"),name:"",tokenIds:[]}); saveSoon(true); render(); }
@@ -1034,6 +1052,8 @@ function growLn(el){ if(!el||el.tagName!=="TEXTAREA"||!el.classList.contains("ln
 function growAllLn(){ $$("textarea.ln-t").forEach(growLn); }
 app.addEventListener("input",function(e){ growLn(e.target); });
 new MutationObserver(function(){ clearTimeout(growAllLn._t); growAllLn._t=setTimeout(growAllLn,0); }).observe(app,{childList:true,subtree:true});
+app.addEventListener("input",function(e){ if(e.target.id!=="tr-q") return; TRQ=e.target.value; var pos=e.target.selectionStart; render(); var q2=$("#tr-q"); if(q2){ q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(er){} } });
+app.addEventListener("change",function(e){ if(e.target.id==="tr-file"){ var f=e.target.files&&e.target.files[0]; if(f) trAdd(f.name); return; } });
 app.addEventListener("change",function(e){ var el=e.target; if(!el.dataset||el.dataset.trl==null||!TRD) return; var ap=(TRD.apps||[]).slice(), i=+el.dataset.trl; if(!ap[i]) return; ap[i]=Object.assign({},ap[i],{label:el.value.trim()||String(ap[i].exe).replace(/\.exe$/i,"")}); TRD.apps=ap; api.trackSet("apps",ap); });
 app.addEventListener("focusout",function(e){ var el=e.target; if(!el.dataset||!el.dataset.ln) return; setTimeout(function(){ if(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.ln) return; var t=cur(); if(!t) return; var changed=false; lineGroups(t).forEach(function(g){ var arr=getLines(t,g[0]); for(var i=arr.length-1;i>=0;i--) if(!String(arr[i]).trim()){ arr.splice(i,1); changed=true; } }); if(changed){ saveSoon(); render(); } },150); });
 app.addEventListener("change",function(e){

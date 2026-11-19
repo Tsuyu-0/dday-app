@@ -60,6 +60,8 @@
     win: function (a) { send("win", a); },
     version: function () { return call("app:version"); },
     trackGet: function () { return call("track:get"); },
+    trackRunning: function () { return call("track:running"); },
+    trackFront: function () { return call("track:front"); },
     trackSet: function (k, v) { return call("track:set", k, v); },
     onTrack: on("track"),
     openFolder: function () { send("folder:open"); },

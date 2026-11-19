@@ -42,6 +42,10 @@ fn inside_data(p: &str) -> Option<PathBuf> {
 fn track_get() -> serde_json::Value { track::get() }
 #[tauri::command]
 fn track_set(key: String, val: serde_json::Value) -> bool { track::set(key, val) }
+#[tauri::command]
+fn track_running() -> serde_json::Value { track::running() }
+#[tauri::command]
+fn track_front() -> serde_json::Value { track::front_now() }
 
 #[tauri::command]
 fn log(msg: String) { eprintln!("[web] {}", msg); }
@@ -150,7 +154,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop, track_get, track_set])
+        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop, track_get, track_set, track_running, track_front])
         .setup(|_app| { track::start(data_dir()); Ok(()) })
         .on_window_event(|w, e| {
             // 관리 창 X → 끄지 않고 숨겨서 트레이에 남아요

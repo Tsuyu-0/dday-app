@@ -105,6 +105,19 @@ pub fn set(key: String, val: Value) -> bool {
     true
 }
 
+/// 지금 켜져 있는(창이 보이는) 프로그램 목록: [{exe, name}] — 프로그램 고르기 창에서 써요
+pub fn running() -> Value {
+    let mut out: Vec<Value> = vec![]; let mut seen: Vec<String> = vec![];
+    for (exe, name) in fg::running() {
+        let low = exe.to_lowercase();
+        if seen.contains(&low) || low.contains("anniversary") || exe.contains("기념일") { continue; }
+        seen.push(low); out.push(json!({ "exe": exe, "name": name }));
+    }
+    json!(out)
+}
+/// 지금 맨 앞 프로그램 (몇 초 뒤 잡기)
+pub fn front_now() -> Value { match fg::front() { Some(e) => json!(e), None => Value::Null } }
+
 pub fn save_now() { if let Ok(mut g) = ST.lock() { if let Some(st) = g.as_mut() { end_session(st); flush(st); } } }
 
 #[cfg(windows)]
@@ -121,24 +134,85 @@ mod fg {
             GetTickCount().wrapping_sub(li.dwTime) as u64
         }
     }
+    use windows_sys::Win32::Foundation::{HWND, LPARAM, BOOL};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{EnumWindows, IsWindowVisible, GetWindow, GetWindowLongW, GetWindowTextLengthW, GW_OWNER, GWL_EXSTYLE, WS_EX_TOOLWINDOW};
+    use windows_sys::Win32::Storage::FileSystem::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW};
+
+    unsafe fn path_of(h: HWND) -> Option<String> {
+        let mut pid: u32 = 0;
+        GetWindowThreadProcessId(h, &mut pid);
+        if pid == 0 { return None; }
+        let ph = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if ph.is_null() { return None; }
+        let mut buf = [0u16; 1024];
+        let mut len = buf.len() as u32;
+        let ok = QueryFullProcessImageNameW(ph, 0, buf.as_mut_ptr(), &mut len);
+        CloseHandle(ph);
+        if ok == 0 { return None; }
+        Some(String::from_utf16_lossy(&buf[..len as usize]))
+    }
+    fn exe_of(path: &str) -> Option<String> { path.rsplit('\\').next().map(|s| s.to_string()).filter(|s| !s.is_empty()) }
+
     /// 지금 앞에 떠 있는 프로그램의 실행 파일 이름 (예: CLIPStudioPaint.exe)
     pub fn front() -> Option<String> {
         unsafe {
             let h = GetForegroundWindow();
             if h.is_null() { return None; }
-            let mut pid: u32 = 0;
-            GetWindowThreadProcessId(h, &mut pid);
-            if pid == 0 { return None; }
-            let ph = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
-            if ph.is_null() { return None; }
-            let mut buf = [0u16; 1024];
-            let mut len = buf.len() as u32;
-            let ok = QueryFullProcessImageNameW(ph, 0, buf.as_mut_ptr(), &mut len);
-            CloseHandle(ph);
-            if ok == 0 { return None; }
-            let path = String::from_utf16_lossy(&buf[..len as usize]);
-            path.rsplit('\\').next().map(|s| s.to_string()).filter(|s| !s.is_empty())
+            path_of(h).and_then(|p| exe_of(&p))
         }
+    }
+
+    /// 실행 파일에 적힌 이름 (예: "CLIP STUDIO PAINT")
+    fn desc_of(path: &str) -> Option<String> {
+        unsafe {
+            let w: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
+            let mut hnd = 0u32;
+            let size = GetFileVersionInfoSizeW(w.as_ptr(), &mut hnd);
+            if size == 0 { return None; }
+            let mut buf = vec![0u8; size as usize];
+            if GetFileVersionInfoW(w.as_ptr(), 0, size, buf.as_mut_ptr() as *mut _) == 0 { return None; }
+            let q = |key: &str| -> Option<String> {
+                let k: Vec<u16> = key.encode_utf16().chain(std::iter::once(0)).collect();
+                let mut p: *mut core::ffi::c_void = std::ptr::null_mut(); let mut l = 0u32;
+                if VerQueryValueW(buf.as_ptr() as *const _, k.as_ptr(), &mut p, &mut l) == 0 || p.is_null() || l == 0 { return None; }
+                let sl = std::slice::from_raw_parts(p as *const u16, l as usize);
+                let s = String::from_utf16_lossy(sl).trim_end_matches('\0').trim().to_string();
+                if s.is_empty() { None } else { Some(s) }
+            };
+            let mut keys: Vec<String> = vec![];
+            let tk: Vec<u16> = "\\VarFileInfo\\Translation".encode_utf16().chain(std::iter::once(0)).collect();
+            let mut p: *mut core::ffi::c_void = std::ptr::null_mut(); let mut l = 0u32;
+            if VerQueryValueW(buf.as_ptr() as *const _, tk.as_ptr(), &mut p, &mut l) != 0 && !p.is_null() && l >= 4 {
+                let t = std::slice::from_raw_parts(p as *const u16, 2);
+                keys.push(format!("\\StringFileInfo\\{:04x}{:04x}\\FileDescription", t[0], t[1]));
+            }
+            keys.push("\\StringFileInfo\\040904b0\\FileDescription".into());
+            keys.push("\\StringFileInfo\\041204b0\\FileDescription".into());
+            for k in keys { if let Some(s) = q(&k) { return Some(s); } }
+            None
+        }
+    }
+
+    unsafe extern "system" fn collect(h: HWND, lp: LPARAM) -> BOOL { let v = &mut *(lp as *mut Vec<HWND>); v.push(h); 1 }
+
+    /// 창이 보이는 프로그램들: (실행 파일, 보기 좋은 이름)
+    pub fn running() -> Vec<(String, String)> {
+        let mut out = vec![];
+        unsafe {
+            let mut hs: Vec<HWND> = vec![];
+            EnumWindows(Some(collect), &mut hs as *mut Vec<HWND> as LPARAM);
+            for h in hs {
+                if IsWindowVisible(h) == 0 || !GetWindow(h, GW_OWNER).is_null() || GetWindowTextLengthW(h) == 0 { continue; }
+                if (GetWindowLongW(h, GWL_EXSTYLE) as u32) & WS_EX_TOOLWINDOW != 0 { continue; }
+                let path = match path_of(h) { Some(p) => p, None => continue };
+                let exe = match exe_of(&path) { Some(e) => e, None => continue };
+                let low = exe.to_lowercase();
+                if ["explorer.exe", "applicationframehost.exe", "textinputhost.exe", "shellexperiencehost.exe", "searchhost.exe", "startmenuexperiencehost.exe", "lockapp.exe"].contains(&low.as_str()) { continue; }
+                let name = desc_of(&path).unwrap_or_else(|| exe.trim_end_matches(".exe").trim_end_matches(".EXE").to_string());
+                out.push((exe, name));
+            }
+        }
+        out
     }
 }
 
@@ -157,10 +231,17 @@ mod fg {
         let parts: Vec<&str> = s.split('"').collect();
         if parts.len() >= 4 { Some(parts[parts.len() - 2].to_string()).filter(|x| !x.is_empty()) } else { None }
     }
+    /// 화면에 보이는 앱들 (Dock에 나오는 앱)
+    pub fn running() -> Vec<(String, String)> {
+        let o = match std::process::Command::new("lsappinfo").arg("visibleProcessList").output() { Ok(o) => o, Err(_) => return vec![] };
+        let s = String::from_utf8_lossy(&o.stdout).to_string();
+        s.split('"').enumerate().filter(|(i, _)| i % 2 == 1).map(|(_, x)| x.trim().to_string()).filter(|x| !x.is_empty() && x != "Finder").map(|x| (x.clone(), x)).collect()
+    }
 }
 
 #[cfg(not(any(windows, target_os = "macos")))]
 mod fg {
     pub fn idle_ms() -> u64 { 0 }
     pub fn front() -> Option<String> { std::env::var("DDAY_FAKE_FRONT").ok() }
+    pub fn running() -> Vec<(String, String)> { vec![("CLIPStudioPaint.exe".into(), "CLIP STUDIO PAINT".into()), ("Photoshop.exe".into(), "Adobe Photoshop 2025".into()), ("chrome.exe".into(), "Google Chrome".into())] }
 }
