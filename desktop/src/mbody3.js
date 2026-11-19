@@ -425,6 +425,51 @@ function pairView(){
   return h+'<button class="btn" data-act="pnew">＋ 새 페어 묶기</button></div>';
 }
 
+/* ---------- 작업 기록 (PC): 고른 프로그램을 쓰는 동안만 시간을 재서 레벨 · 보상으로 ---------- */
+var TRD=null, TRT=null, TRCOL=["#4f7cff","#f06292","#2bb3a3","#ff9f43","#9b6bff","#3aa0d8","#e0a020","#5b6b80"];
+function trLoad(){ if(!api.trackGet) return; api.trackGet().then(function(D){ TRD=D||{}; if(VIEW==="track"&&!document.activeElement.matches("input[data-trl]")) render(); if(VIEW==="cal"){ var el=$("#trtab"); if(el&&DAYSEL) el.outerHTML=ttHTML(DAYSEL); } }); }
+function trColor(i){ return TRCOL[i%TRCOL.length]; }
+function trackView(){
+  var TK=AN.track, D=TRD||{}, apps=D.apps||[], sm=TK.sum(D), today=D.today||AN.ymd(new Date()), td=(D.days||{})[today]||{}, h='<div class="wrap"><div class="h1">작업 기록</div><p class="lead">고른 프로그램을 쓰는 동안만 시간을 재요. 마우스 · 키보드를 5초 넘게 안 만지면 멈추고, 이어서 쓴 시간이 집중 시간이 돼요.</p>';
+  if(!TRD) return h+'<div class="empty">기록을 불러오는 중…</div></div>';
+  var tdT=0; Object.keys(td).forEach(function(e){ tdT+=td[e].t||0; });
+  var lv=sm.lv, live=D.live;
+  h+='<div class="box tr-top"><div class="tr-lv"><div class="tr-badge">Lv.'+lv.lv+'</div><div class="tr-lvt"><b>'+esc(TK.title(lv.lv))+'</b><span>다음 레벨까지 '+TK.fmt((lv.next-lv.cur)*60)+'</span><div class="tr-bar"><i style="width:'+Math.round(lv.pct*100)+'%"></i></div></div></div>'+
+     '<div class="tr-stats"><div><small>오늘 집중</small><b>'+TK.fmt(tdT)+'</b></div><div><small>누적</small><b>'+TK.fmt(sm.total)+'</b></div><div><small>연속 기록</small><b>'+sm.streak+'일</b></div><div><small>최고 몰입</small><b>'+TK.fmt(sm.bestS)+'</b></div></div>'+
+     '<div class="tr-live'+(live?" on":"")+'">'+(live?'<i></i> 지금 <b>'+esc(TK.label(D,live.exe))+'</b> '+TK.fmt(live.len)+'째 집중 중':apps.length?'고른 프로그램을 쓰면 여기서 시간이 올라가요':'아래에서 잴 프로그램을 먼저 골라 주세요')+'</div></div>';
+  /* 잴 프로그램 */
+  h+='<div class="box"><div class="box-t">잴 프로그램</div>';
+  h+=apps.length?'<div class="tr-apps">'+apps.map(function(a,i){ var m=Math.floor((sm.byApp[a.exe]||0)/60), l=TK.level(m); return '<div class="tr-app"><span class="tr-dot" style="background:'+esc(a.color||trColor(i))+'"></span><input class="in" data-trl="'+i+'" value="'+esc(a.label||TK.label(D,a.exe))+'" title="'+esc(a.exe)+'"><span class="tr-al">Lv.'+l.lv+' · 오늘 '+TK.fmt((td[a.exe]||{}).t||0)+'</span><button class="ib" data-act="trrm" data-i="'+i+'" title="빼기">×</button></div>'; }).join("")+'</div>':'<p class="note" style="margin:0 0 8px">아직 고른 프로그램이 없어요.</p>';
+  var seen=(D.seen||[]).filter(function(x){ return !apps.some(function(a){ return a.exe.toLowerCase()===String(x).toLowerCase(); }); });
+  h+='<div class="lbl">최근에 쓴 프로그램에서 고르기</div>'+(seen.length?'<div class="chips">'+seen.map(function(x){ return '<button data-act="tradd" data-exe="'+esc(x)+'">+ '+esc(String(x).replace(/\.exe$/i,""))+'</button>'; }).join("")+'</div>':'<p class="note" style="margin:0">잴 프로그램을 한 번 열어서 잠깐 쓰고 돌아오면 여기에 나와요.</p>');
+  h+='<div class="tiles" style="margin-top:12px">'+tile("s-trtalk",(S.settings||{}).trackTalk!==false,"캐릭터가 응원해요","30분마다 · 레벨이 오르거나 보상을 받으면 말풍선으로 알려 줘요")+'</div></div>';
+  /* 최근 7일 */
+  var days=[], mx=1; for(var k=6;k>=0;k--){ var dt=AN.parseYmd(today)||new Date(); dt.setDate(dt.getDate()-k); var y=AN.ymd(dt), dd=(D.days||{})[y]||{}, tot=0; Object.keys(dd).forEach(function(e){ tot+=dd[e].t||0; }); mx=Math.max(mx,tot); days.push({y:y,dd:dd,tot:tot,dt:dt}); }
+  h+='<div class="box"><div class="box-t">최근 7일</div><div class="tr-week">'+days.map(function(x){ return '<div class="tr-col" title="'+x.y+' · '+TK.fmt(x.tot)+'"><span class="tr-v">'+(x.tot?TK.fmt(x.tot).replace(/ \d+분$/,""):"")+'</span><div class="tr-stack">'+apps.map(function(a,i){ var t=(x.dd[a.exe]||{}).t||0; return t?'<i style="height:'+(t/mx*100).toFixed(1)+'%;background:'+esc(a.color||trColor(i))+'"></i>':""; }).join("")+'</div><small>'+(x.y===today?"오늘":(x.dt.getMonth()+1)+"/"+x.dt.getDate())+'</small></div>'; }).join("")+'</div></div>';
+  /* 날짜별 기록 */
+  var dk=Object.keys(D.days||{}).sort().reverse().slice(0,30);
+  h+='<div class="box"><div class="box-t">날짜별 기록</div>'+(dk.length?'<div class="tr-log">'+dk.map(function(y){ var dd=D.days[y], tot=0, best=0; var rows=Object.keys(dd).sort(function(a,b){ return (dd[b].t||0)-(dd[a].t||0); }).map(function(e){ tot+=dd[e].t||0; best=Math.max(best,dd[e].best||0); return '<span class="tr-chip">'+esc(TK.label(D,e))+' <b>'+TK.fmt(dd[e].t)+'</b>'+(dd[e].best?' <small>최고 '+TK.fmt(dd[e].best)+'</small>':"")+'</span>'; }).join(""); return '<div class="tr-day"><div class="tr-dh"><b>'+y.slice(5).replace("-","월 ")+'일</b><span>'+TK.fmt(tot)+'</span></div><div class="tr-dr">'+rows+'</div></div>'; }).join("")+'</div>':'<p class="note" style="margin:0">아직 기록이 없어요.</p>')+'</div>';
+  /* 보상 */
+  var got=D.got||{};
+  h+='<div class="box"><div class="box-t">보상 '+TK.BADGES.filter(function(b){ return got["b:"+b[0]]; }).length+' / '+TK.BADGES.length+'</div><div class="tr-badges">'+TK.BADGES.map(function(b){ var g=got["b:"+b[0]]; return '<div class="tr-bd'+(g?" on":"")+'" title="'+esc(b[2])+'"><span>'+(g?b[3]:"🔒")+'</span><b>'+esc(b[1])+'</b><small>'+(g?esc(String(g).slice(5).replace("-","/"))+" 받음":esc(b[2]))+'</small></div>'; }).join("")+'</div>'+
+     '<div class="lbl" style="margin-top:12px">칭호</div><div class="chips">'+TK.TITLES.map(function(t){ return '<button class="'+(lv.lv>=t[0]?"on":"")+'" disabled>Lv.'+t[0]+' '+esc(t[1])+'</button>'; }).join("")+'</div></div>';
+  return h+'</div>';
+}
+/* 시간 기록표 (모트모트처럼): 하루 24시간 × 10분 칸. 그 10분에 가장 오래 쓴 프로그램 색으로 칠해요 */
+function ttHTML(k){
+  if(!window.__TAURI__||!api.trackGet) return "";
+  var D=TRD; if(!D) return '<div class="box tt" id="trtab"><div class="box-t">시간 기록표</div><div class="emp">불러오는 중…</div></div>';
+  var apps=D.apps||[], col={}; apps.forEach(function(a,i){ col[a.exe]=a.color||trColor(i); });
+  var day=AN.parseYmd(k); if(!day) return ""; var t0=day.getTime()/1000, blk={}, per={}, tot=0;
+  var ses=(D.log||[]).filter(function(l){ return l[2]+l[3]>t0&&l[2]<t0+86400; }).map(function(l){ return [l[1],l[2],l[3]]; });
+  if(D.live&&D.live.len) ses.push([D.live.exe,Math.floor(Date.now()/1000)-D.live.len,D.live.len]);
+  ses.forEach(function(x){ var a=Math.max(x[1],t0), b=Math.min(x[1]+x[2],t0+86400); while(a<b){ var bi=Math.floor((a-t0)/600), e=Math.min(b,t0+(bi+1)*600), sec=e-a; (blk[bi]=blk[bi]||{})[x[0]]=(blk[bi][x[0]]||0)+sec; per[x[0]]=(per[x[0]]||0)+sec; tot+=sec; a=e; } });
+  var rows="", h0=6;
+  for(var r=0;r<24;r++){ var hr=(h0+r)%24, cells=""; for(var c=0;c<6;c++){ var bi=hr*6+c, m=blk[bi], st=""; if(m){ var best=null,bs=0,sum=0; Object.keys(m).forEach(function(e){ sum+=m[e]; if(m[e]>bs){bs=m[e];best=e;} }); st=' style="background:'+esc(col[best]||"#8a8a90")+';opacity:'+Math.max(.35,Math.min(1,sum/600)).toFixed(2)+'" title="'+esc(AN.track.label(D,best))+' · '+AN.track.fmt(sum)+'"'; } cells+='<i'+st+'></i>'; } rows+='<div class="tt-r"><span>'+hr+'</span>'+cells+'</div>'; }
+  var leg=Object.keys(per).sort(function(a,b){ return per[b]-per[a]; }).map(function(e){ return '<span class="tt-l"><i style="background:'+esc(col[e]||"#8a8a90")+'"></i>'+esc(AN.track.label(D,e))+' <b>'+AN.track.fmt(per[e])+'</b></span>'; }).join("");
+  return '<div class="box tt" id="trtab"><div class="tt-h"><span class="box-t" style="margin:0">시간 기록표</span><b>'+AN.track.fmt(tot)+'</b></div>'+(apps.length?"":'<p class="note" style="margin:0 0 8px">[기록]에서 잴 프로그램을 고르면 쓴 시간이 여기 칠해져요.</p>')+'<div class="tt-g">'+rows+'</div>'+(leg?'<div class="tt-leg">'+leg+'</div>':"")+'</div>';
+}
+function trSetApps(apps){ TRD.apps=apps; api.trackSet("apps",apps).then(trLoad); render(); }
 function setView(){
   var c=S.settings||{}, th=c.theme||"system";
   return '<div class="wrap"><div class="h1">설정</div><p class="lead">프로그램 전체에 적용돼요.</p>'+
@@ -548,7 +593,7 @@ function agendaHTML(k){
     on.events.map(function(e){ var c=AN.catOf(e.cat), star=e.star||(e.who&&e.who.type==="token"?e.who.id:null); return '<button class="item" data-ev="'+esc(e.id)+'"><span class="bar" style="background:'+c[2]+'"></span>'+(star?avOf(star):"")+'<span class="mid"><b>'+esc(e.title)+"</b><small>"+(e.time?e.time+" · ":"")+c[1]+"</small></span></button>"; }).join("");
   var dd=AN.eventDays({date:k});
   return '<aside class="agenda"><div class="box"><span class="tape r"></span><div class="dt2">'+(dd===0?"오늘":ddText(dd))+" · "+WD[d.getDay()]+'요일</div><div class="dt1">'+(d.getMonth()+1)+"월 "+d.getDate()+"일</div>"+(rows||'<div class="emp">아직 아무 일도 없어요.</div>')+
-    '<div class="agbtn"><button data-act="ag-ev">＋ 일정</button><button data-act="ag-an">＋ 기념일</button></div><textarea class="in" id="ag-memo" placeholder="이날의 메모, 일기, 감상…">'+esc((S.notes||{})[k]||"")+"</textarea></div></aside>";
+    '<div class="agbtn"><button data-act="ag-ev">＋ 일정</button><button data-act="ag-an">＋ 기념일</button></div><textarea class="in" id="ag-memo" placeholder="이날의 메모, 일기, 감상…">'+esc((S.notes||{})[k]||"")+"</textarea></div>"+ttHTML(k)+"</aside>";
 }
 function stkById(id){ var md=monthData(curYM()); return (md.stickers||[]).filter(function(s){return s.id===id})[0]; }
 function stkHTML(s){
@@ -726,6 +771,8 @@ $("#mini").addEventListener("click",function(e){
 });
 
 /* ---------- 그리기 ---------- */
+/* 작업 기록은 PC 앱에서만 (다른 프로그램을 알아봐야 해서) */
+(function(){ var b=document.querySelector('.rbtn[data-nav="track"]'); if(b&&!window.__TAURI__) b.remove(); })();
 function render(){
   document.body.classList.toggle("otaku",(S.settings||{}).look==="otaku");
   if(S.tokens.length&&!tokById(SEL)) SEL=S.tokens[0].id;
@@ -733,12 +780,13 @@ function render(){
   var t=tokById(SEL); setAccent(VIEW==="char"?t:null);
   renderSide();
   var st=app.scrollTop;
-  app.innerHTML=VIEW==="home"?homeView():VIEW==="cal"?calView():VIEW==="events"?eventsView():VIEW==="char"?charView():VIEW==="pair"?pairView():VIEW==="anniv"?annivView():setView();
+  app.innerHTML=VIEW==="home"?homeView():VIEW==="cal"?calView():VIEW==="events"?eventsView():VIEW==="char"?charView():VIEW==="pair"?pairView():VIEW==="anniv"?annivView():VIEW==="track"?trackView():setView();
   app.scrollTop=st;
-  $("#crumb").textContent=VIEW==="char"?(t?"캐릭터 · "+(t.nick||t.name||"이름 없음"):"캐릭터"):({home:"홈",cal:"다이어리 달력",events:"일정",pair:"페어",anniv:"기념일",set:"설정"})[VIEW]||"";
+  $("#crumb").textContent=VIEW==="char"?(t?"캐릭터 · "+(t.nick||t.name||"이름 없음"):"캐릭터"):({home:"홈",cal:"다이어리 달력",events:"일정",pair:"페어",anniv:"기념일",track:"작업 기록",set:"설정"})[VIEW]||"";
   if(VIEW==="char"&&t) drawZones();
   if(VIEW==="home"&&t) ZMAP=null;
   if(VIEW==="set") ovSync();
+  clearInterval(TRT); if(VIEW==="track"){ if(!TRD) trLoad(); TRT=setInterval(trLoad,5000); } if(VIEW==="cal"&&window.__TAURI__){ trLoad(); TRT=setInterval(trLoad,30000); }
   $$('input[type=range]').forEach(fillRange);
   api.version().then(function(v){ $("#ver").textContent="v"+v; var v2=$("#ver2"); if(v2) v2.textContent="v"+v; });
 }
@@ -766,6 +814,7 @@ function toggleTile(id){
   if(id==="s-mute") setCfg("mute",!c.mute);
   if(id==="s-swap") setCfg("annivSwap",c.annivSwap===false);
   if(id==="s-notify") setCfg("annivNotify",c.annivNotify===false);
+  if(id==="s-trtalk") setCfg("trackTalk",c.trackTalk===false);
   if(id==="s-ovquiet") setCfg("ovQuietSilent",!c.ovQuietSilent);
   render();
 }
@@ -868,6 +917,8 @@ app.addEventListener("click",function(e){
     pq.dialogs=D2; delete pq.talks; saveSoon(true); render();
     if(a==="dladd"||a==="dlgadd"){ var ii=a==="dlgadd"?D2.length-1:i2, rows=$$('[data-pair="'+pq.id+'"] [data-dlg="'+ii+'"] .dl-t'), tgt=a==="dlgadd"?rows[0]:rows[rows.length-1]; if(tgt) tgt.focus(); }
     return; }
+  if(a==="tradd"&&TRD){ var ap=(TRD.apps||[]).slice(); ap.push({exe:b.dataset.exe,label:String(b.dataset.exe).replace(/\.exe$/i,""),color:trColor(ap.length)}); trSetApps(ap); return; }
+  if(a==="trrm"&&TRD){ var ap2=(TRD.apps||[]).slice(); var gone=ap2.splice(+b.dataset.i,1)[0]; if(gone&&!confirm("'"+(gone.label||gone.exe)+"' 재기를 그만할까요? 지금까지의 기록은 남아요.")) return; trSetApps(ap2); return; }
   if(a==="ptalk"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",Date.now()); },300); return; }
   if(a==="pnew"){ S.pairs.push({id:uid("p"),name:"",tokenIds:[]}); saveSoon(true); render(); }
   if(a==="pdel"){ var p2=pairOf(b); ask("이 페어를 풀까요? 캐릭터는 그대로 남아요.","풀기").then(function(ok){ if(!ok) return; S.pairs=S.pairs.filter(function(z){return z!==p2}); S.annivs=(S.annivs||[]).filter(function(z){ return !(z.who&&z.who.type==="pair"&&z.who.id===p2.id); }); saveSoon(true); render(); }); }
@@ -913,6 +964,7 @@ function growLn(el){ if(!el||el.tagName!=="TEXTAREA"||!el.classList.contains("ln
 function growAllLn(){ $$("textarea.ln-t").forEach(growLn); }
 app.addEventListener("input",function(e){ growLn(e.target); });
 new MutationObserver(function(){ clearTimeout(growAllLn._t); growAllLn._t=setTimeout(growAllLn,0); }).observe(app,{childList:true,subtree:true});
+app.addEventListener("change",function(e){ var el=e.target; if(!el.dataset||el.dataset.trl==null||!TRD) return; var ap=(TRD.apps||[]).slice(), i=+el.dataset.trl; if(!ap[i]) return; ap[i]=Object.assign({},ap[i],{label:el.value.trim()||String(ap[i].exe).replace(/\.exe$/i,"")}); TRD.apps=ap; api.trackSet("apps",ap); });
 app.addEventListener("focusout",function(e){ var el=e.target; if(!el.dataset||!el.dataset.ln) return; setTimeout(function(){ if(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.ln) return; var t=cur(); if(!t) return; var changed=false; lineGroups(t).forEach(function(g){ var arr=getLines(t,g[0]); for(var i=arr.length-1;i>=0;i--) if(!String(arr[i]).trim()){ arr.splice(i,1); changed=true; } }); if(changed){ saveSoon(); render(); } },150); });
 app.addEventListener("change",function(e){
   var el=e.target, t=cur();

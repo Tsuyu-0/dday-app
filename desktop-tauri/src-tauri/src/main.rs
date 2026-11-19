@@ -12,6 +12,8 @@ use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 
+mod track;
+
 static QUITTING: AtomicBool = AtomicBool::new(false);
 
 /// 예전(Electron) 버전과 같은 데이터 폴더를 써요 → 옮길 필요 없이 그대로 이어져요.
@@ -34,6 +36,12 @@ fn inside_data(p: &str) -> Option<PathBuf> {
     let r = root.canonicalize().ok()?;
     if c.starts_with(&r) { Some(c) } else { None }
 }
+
+/// 작업 기록 (track.rs)
+#[tauri::command]
+fn track_get() -> serde_json::Value { track::get() }
+#[tauri::command]
+fn track_set(key: String, val: serde_json::Value) -> bool { track::set(key, val) }
 
 #[tauri::command]
 fn log(msg: String) { eprintln!("[web] {}", msg); }
@@ -104,7 +112,7 @@ fn set_autostart(app: tauri::AppHandle, on: bool) {
 fn started_hidden() -> bool { std::env::args().any(|a| a == "--hidden") }
 
 #[tauri::command]
-fn quit_app(app: tauri::AppHandle) { QUITTING.store(true, Ordering::SeqCst); let _ = app.emit("quitting", ()); std::thread::sleep(std::time::Duration::from_millis(300)); app.exit(0); }
+fn quit_app(app: tauri::AppHandle) { QUITTING.store(true, Ordering::SeqCst); track::save_now(); let _ = app.emit("quitting", ()); std::thread::sleep(std::time::Duration::from_millis(300)); app.exit(0); }
 
 /* 돌아다니기: 창을 Rust 쪽에서 촘촘하게(약 120번/초) 옮겨야 덜 끊겨요. 창마다 번호를 올려서 새 걸음이 오면 이전 걸음은 멈춰요 */
 static WALK_GEN: std::sync::Mutex<Option<std::collections::HashMap<String, u64>>> = std::sync::Mutex::new(None);
@@ -142,7 +150,8 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop])
+        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop, track_get, track_set])
+        .setup(|_app| { track::start(data_dir()); Ok(()) })
         .on_window_event(|w, e| {
             // 관리 창 X → 끄지 않고 숨겨서 트레이에 남아요
             if let tauri::WindowEvent::CloseRequested { api, .. } = e {

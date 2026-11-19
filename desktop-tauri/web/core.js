@@ -427,6 +427,34 @@
   }
   setInterval(checkReminders, 30000);
 
+  /* ---------- 작업 기록: 레벨 · 보상을 받으면 캐릭터가 말풍선으로 축하해요 ---------- */
+  var trLive = { exe: null, mark: 0 };
+  function trackCheck() {
+    return invoke("track_get").then(function (D) {
+      if (!D || !Array.isArray(D.apps) || !A.track) return;
+      var TK = A.track, sm = TK.sum(D), got = Object.assign({}, D.got || {}), news = [];
+      sm.earned.forEach(function (k) {
+        if (got["b:" + k]) return; got["b:" + k] = D.today;
+        var b = TK.BADGES.filter(function (x) { return x[0] === k; })[0]; if (b) news.push(b[3] + " 보상: " + b[1] + "!");
+      });
+      var L = sm.lv.lv; if ((got.lv || 1) < L) { got.lv = L; news.unshift("레벨 " + L + " 달성! 이제 '" + TK.title(L) + "'이야"); }
+      Object.keys(sm.byApp).forEach(function (e) { var l = TK.level(Math.floor(sm.byApp[e] / 60)).lv, k = "lv:" + e; if ((got[k] || 1) < l) { got[k] = l; news.push(TK.label(D, e) + " " + l + "레벨!"); } });
+      if (news.length) { invoke("track_set", { key: "got", val: got }).catch(function () {}); sayTrack(news.slice(0, 2).join("\n")); pushTrack(); return; }
+      /* 이어서 집중한 지 30분마다 한마디 */
+      var lv = D.live;
+      if (!lv) { trLive = { exe: null, mark: 0 }; return; }
+      if (lv.exe !== trLive.exe) trLive = { exe: lv.exe, mark: 0 };
+      var b30 = Math.floor((lv.len || 0) / 1800);
+      if (b30 > trLive.mark) { trLive.mark = b30; var m = b30 * 30; sayTrack(TK.label(D, lv.exe) + " " + (m >= 60 ? Math.floor(m / 60) + "시간" + (m % 60 ? " " + m % 60 + "분" : "") : m + "분") + "째 집중 중! " + (b30 >= 4 ? "조금 쉬어 가도 돼" : "잘하고 있어")); }
+    }).catch(function () {});
+  }
+  function sayTrack(line) { if (pet && S && !S.settings.allHidden && S.settings.trackTalk !== false) sendTo("pet", "pet:say", { line: line, view: "track" }); }
+  function pushTrack() { if (managerShown()) invoke("track_get").then(function (D) { sendTo("manager", "track", D); }).catch(function () {}); }
+  function managerShown() { return true; }
+  setInterval(trackCheck, 60000); setTimeout(trackCheck, 20000);
+  handlers["track:get"] = function () { return invoke("track_get"); };
+  handlers["track:set"] = function (k, v) { return invoke("track_set", { key: String(k), val: v }).then(function (r) { setTimeout(trackCheck, 500); return r; }); };
+
   /* ---------- 관리 창 ---------- */
   var miniMode = false, keepT = null;
   function showManager() {

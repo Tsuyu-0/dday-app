@@ -93,5 +93,47 @@ A.soonLine=function(S,a,n){ var c=String(a.tellLine||"").trim();
 A.tellFor=function(S,tid,shown){ return A.upcoming(S).filter(function(x){ var a=x.a, d=x.n.days; if(!(d>0&&d<=A.tellOf(a))||!A.involves(S,a,tid)) return false;
     if(a.who.type!=="pair"||!shown) return true; var st=A.starOf(S,a); if(shown.indexOf(st)>=0) return st===tid;
     var first=shown.filter(function(id){ return A.involves(S,a,id); })[0]; return first===tid; }); };
+
+/* ---------- 작업 기록: 레벨 · 칭호 · 보상 ----------
+   집중 시간 = 고른 프로그램을 쓰는 동안(입력이 5초 넘게 끊기지 않고 이어진 시간). 1분 = 경험치 1 */
+var TK={};
+TK.need=function(L){ return 15*(L-1)*L; };                       /* 그 레벨이 되는 데 필요한 분: 2레벨 30분 · 3레벨 1시간 30분 · 5레벨 5시간 · 10레벨 22시간 30분 */
+TK.level=function(min){ var L=1; while(TK.need(L+1)<=min) L++; var a=TK.need(L), b=TK.need(L+1); return { lv:L, cur:min-a, next:b-a, pct:Math.min(1,(min-a)/Math.max(1,b-a)) }; };
+TK.TITLES=[[1,"새싹"],[3,"견습생"],[5,"성실한 손"],[8,"몰입러"],[12,"장인"],[16,"마스터"],[20,"전설"]];
+TK.title=function(L){ var t=TK.TITLES[0][1]; TK.TITLES.forEach(function(x){ if(L>=x[0]) t=x[1]; }); return t; };
+TK.fmt=function(sec){ sec=Math.max(0,Math.round(sec||0)); var h=Math.floor(sec/3600), m=Math.floor(sec%3600/60); return h?h+"시간"+(m?" "+m+"분":""):m?m+"분":sec+"초"; };
+/* 보상(배지) */
+TK.BADGES=[
+  ["first","첫 기록","처음으로 작업 시간을 기록했어요","🌱"],
+  ["s30","30분 몰입","한 번에 30분 이어서 집중","⏳"],
+  ["s60","1시간 몰입","한 번에 1시간 이어서 집중","🔥"],
+  ["s120","2시간 몰입","한 번에 2시간 이어서 집중","💎"],
+  ["d3h","오늘 3시간","하루에 3시간 넘게 집중","☀️"],
+  ["d6h","오늘 6시간","하루에 6시간 넘게 집중","🌞"],
+  ["k3","3일 연속","3일 연속으로 10분 넘게 기록","✨"],
+  ["k7","7일 연속","일주일 내내 기록","🏅"],
+  ["k30","30일 연속","한 달 내내 기록","👑"],
+  ["t10","누적 10시간","모두 합쳐 10시간","📗"],
+  ["t50","누적 50시간","모두 합쳐 50시간","📘"],
+  ["t100","누적 100시간","모두 합쳐 100시간","📕"]
+];
+/* 기록 정리: 날짜별 합계 · 프로그램별 합계 · 연속 일수 · 받을 수 있는 배지 */
+TK.sum=function(D){
+  D=D||{}; var days=D.days||{}, byApp={}, byDay={}, total=0, bestS=0, maxDay=0;
+  Object.keys(days).forEach(function(d){ var t=0; Object.keys(days[d]||{}).forEach(function(e){ var x=days[d][e]||{}; t+=x.t||0; byApp[e]=(byApp[e]||0)+(x.t||0); bestS=Math.max(bestS,x.best||0); }); byDay[d]=t; total+=t; maxDay=Math.max(maxDay,t); });
+  if(D.live&&D.live.len) bestS=Math.max(bestS,D.live.len);
+  /* 연속: 오늘(또는 어제)부터 거꾸로 10분 넘게 기록한 날 */
+  var streak=0, dt=(D.today&&A.parseYmd(D.today))||new Date(); dt=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate());
+  if((byDay[ymd(dt)]||0)<600) dt.setDate(dt.getDate()-1);
+  while((byDay[ymd(dt)]||0)>=600){ streak++; dt.setDate(dt.getDate()-1); }
+  var has=Object.keys(days).length>0&&total>0, earned=[];
+  if(has) earned.push("first"); if(bestS>=1800) earned.push("s30"); if(bestS>=3600) earned.push("s60"); if(bestS>=7200) earned.push("s120");
+  if(maxDay>=3*3600) earned.push("d3h"); if(maxDay>=6*3600) earned.push("d6h");
+  if(streak>=3) earned.push("k3"); if(streak>=7) earned.push("k7"); if(streak>=30) earned.push("k30");
+  if(total>=36000) earned.push("t10"); if(total>=180000) earned.push("t50"); if(total>=360000) earned.push("t100");
+  return { byApp:byApp, byDay:byDay, total:total, bestS:bestS, streak:streak, earned:earned, lv:TK.level(Math.floor(total/60)) };
+};
+TK.label=function(D,exe){ var a=((D&&D.apps)||[]).filter(function(x){ return x.exe===exe; })[0]; return a&&a.label||String(exe||"").replace(/\.exe$/i,""); };
+A.track=TK;
 if(typeof module!=="undefined"&&module.exports) module.exports=A; else root.Annivs=A;
 })(this);
