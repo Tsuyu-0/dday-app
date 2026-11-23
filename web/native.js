@@ -7,6 +7,20 @@
   // 플러그인 연결: 캡파시터 코어(capacitor.js)의 registerPlugin → 없으면 Plugins에서 바로
   var REG = (window.capacitorExports && window.capacitorExports.registerPlugin) || (C.registerPlugin && C.registerPlugin.bind(C)) || function (n) { return (C.Plugins || {})[n]; };
   window.ddPlugin = REG;
+  /* 파일 불러오기: 웹뷰 기본 창은 .ddchar · .ddtalk · 백업 파일을 흐리게 막아 버려서, 모든 파일을 고를 수 있는 안드로이드 창으로 열어요 */
+  document.addEventListener("click", function (e) {
+    var inp = e.target;
+    if (!inp || !inp.matches || !inp.matches('input[type="file"]')) return;
+    if (/image/i.test(inp.getAttribute("accept") || "")) return; // 그림 고르기는 그대로
+    e.preventDefault(); e.stopPropagation();
+    REG("DdayWidget").openDoc().then(function (r) {
+      if (!r || !r.ok) return;
+      try {
+        var dt = new DataTransfer(); dt.items.add(new File([r.text || ""], r.name || "file.json", { type: "application/json" }));
+        inp.files = dt.files; inp.dispatchEvent(new Event("change", { bubbles: true }));
+      } catch (er) { if (window.toast) toast("파일을 불러오지 못했어요"); }
+    }).catch(function () { if (window.toast) toast("파일을 불러오지 못했어요"); });
+  }, true);
   var AN = null, Widget = REG("DdayWidget"), LN = REG("LocalNotifications");
   var last = null, t = null, asked = false;
 
