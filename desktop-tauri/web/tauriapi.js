@@ -23,6 +23,12 @@
   /* 캐릭터 창: 그림 위에 있을 때만 마우스를 받고, 나머지는 바탕화면으로 통과.
      통과 중에는 마우스 움직임이 안 들어와서 커서 위치를 조금씩 확인해 대신 알려 줘요. */
   var ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0, walkUntil = 0, bnd = null, dragCur = null;
+  /* 바닥: 작업 표시줄 위. 모니터 정보에 작업 영역이 없을 때(모니터 전체 크기만 올 때) 캐릭터가 작업 표시줄 뒤로 숨어 버려서,
+     창이 있는 화면의 '쓸 수 있는 영역'(screen.avail*)으로 한 번 더 맞춰요 */
+  function fixFloor() {
+    if (!bnd) return;
+    try { var sc = window.screen, wh = window.innerHeight; if (sc && sc.availHeight > 100) { var f = (sc.availTop || 0) + sc.availHeight - wh; if (Math.abs(f - bnd.y1) < 400) bnd.y1 = Math.min(bnd.y1, f); } } catch (e) {}
+  }
   function moveClamp(x, y) { var hit = 0; if (bnd) { if (x < bnd.x0) { x = bnd.x0; hit = 1; } else if (x > bnd.x1) { x = bnd.x1; hit = 2; } if (y < bnd.y0) { y = bnd.y0; hit = hit || 3; } else if (y > bnd.y1) { y = bnd.y1; hit = hit || 4; } } dragCur = { x: x, y: y }; win.setPosition(new LPos(Math.round(x), Math.round(y))).catch(function () {}); return hit; }
   function refreshPos() { return Promise.all([win.outerPosition(), win.scaleFactor()]).then(function (r) { k = r[1] || 1; pos = { x: r[0].x, y: r[0].y }; posT = Date.now(); }).catch(function () {}); }
   function setIgnore(v) { v = !!v; if (v === ignoring) return; ignoring = v; win.setIgnoreCursorEvents(v).catch(function () {}); }
@@ -89,7 +95,7 @@
       (function f() { var t = (Date.now() - t0) / 700; if (t >= 1) { win.setPosition(new PP(x0, y0)).catch(function () {}); return; } win.setPosition(new PP(Math.round(x0 + dist * Math.sin(t * Math.PI)), y0)).catch(function () {}); setTimeout(f, 30); })(); }).catch(function () {}); },
     petIgnore: function (v) { if (!dragFrom) setIgnore(v); },
     petDragStart: function (inset) { inset = inset || 0; setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; dragCur = { x: dragFrom.x, y: dragFrom.y }; });
-      window.api.walkInfo().then(function (I) { var s = I.sf || 1; bnd = { x0: I.ax / s - inset, x1: (I.ax + I.aw - I.w) / s + inset, y0: I.ay / s - I.h / s * .45, y1: (I.ay + I.ah - I.h) / s }; }).catch(function () { bnd = null; }); },
+      window.api.walkInfo().then(function (I) { var s = I.sf || 1; bnd = { x0: I.ax / s - inset, x1: (I.ax + I.aw - I.w) / s + inset, y0: I.ay / s - I.h / s * .45, y1: (I.ay + I.ah - I.h) / s }; fixFloor(); }).catch(function () { bnd = null; }); },
     /* 끌기: 화면 밖으로는 못 나가요. 벽에 닿으면 어느 쪽인지 돌려줘요 (1 왼쪽 2 오른쪽 3 위 4 아래) */
     petDrag: function (dx, dy) { if (!dragFrom) return 0; return moveClamp(dragFrom.x + dx, dragFrom.y + dy); },
     petDragEnd: function () { dragFrom = null; refreshPos(); send("pet:dragend"); },
@@ -120,7 +126,7 @@
     },
     /* 돌아다니기: 창 위치 · 화면 작업 영역(작업 표시줄 뺀 곳)을 실제 픽셀로 */
     walkInfo: function () { return Promise.all([win.outerPosition(), win.outerSize(), win.scaleFactor(), T.window.currentMonitor()]).then(function (r) {
-      var m = r[3] || {}, wa = m.workArea || { position: m.position || { x: 0, y: 0 }, size: m.size || { width: 1920, height: 1080 } };
+      var m = r[3] || {}, sk = m.scaleFactor || r[2] || 1, wa = m.workArea || { position: m.position || { x: 0, y: 0 }, size: m.size ? { width: m.size.width, height: m.size.height - 48 * sk } : { width: 1920, height: 1032 } };
       return { x: r[0].x, y: r[0].y, w: r[1].width, h: r[1].height, sf: r[2] || 1, ax: wa.position.x, aw: wa.size.width, ay: wa.position.y, ah: wa.size.height }; }); },
     walkMove: function (fromX, toX, y, ms) { walkUntil = Date.now() + ms + 300; return T.core.invoke("walk_move", { fromX: fromX, toX: toX, y: y, ms: Math.round(ms) }).catch(function () {}); },
     walkStop: function () { walkUntil = 0; refreshPos(); return T.core.invoke("walk_stop").catch(function () {}); },

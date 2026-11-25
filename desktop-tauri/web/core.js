@@ -195,6 +195,8 @@
     });
     updateTray();
   }
+  // 가끔 '늘 위에'를 다시 걸어 둬요 (다른 프로그램이 맨 위를 가져가도 캐릭터가 창 아래로 사라지지 않게)
+  setInterval(function () { if (!S || S.settings.pinned === false) return; LABELS.forEach(function (l) { var w = P[l] && P[l].win; if (w) w.setAlwaysOnTop(true).catch(function () {}); }); }, 45000);
   setInterval(function () { if (!S) return; var d = A.ymd(new Date()); if (d !== lastDay) { lastDay = d; syncPets(); pushToManager(); } }, 30000);
 
   /* ---------- 둘이 나누는 대화 ---------- */
@@ -305,7 +307,13 @@
   handlers["pet:petted"] = function (from) { if (duoPair()) friendsReact(from || "pet", "pet"); };
 
   handlers["pet:token"] = function (from) { return petData(from || "pet"); };
-  handlers["pet:dragend"] = function (from) { saveFoot(from || "pet"); };
+  handlers["pet:dragend"] = function (from) {
+    var l = from || "pet"; saveFoot(l);
+    // 옮기거나 떨어진 뒤에도 늘 위에 (다른 창 아래로 숨지 않게) · 화면 밖이면 안으로
+    var w = P[l] && P[l].win; if (!w) return;
+    if (S.settings.pinned !== false) w.setAlwaysOnTop(true).catch(function () {});
+    boundsOf(w).then(function (b) { var k = keepOnScreen(b.x, b.y, b.width, b.height); if (Math.abs(k.x - b.x) > 2 || Math.abs(k.y - b.y) > 2) w.setPosition(new LPos(Math.round(k.x), Math.round(k.y))).then(function () { saveFoot(l); }).catch(function () {}); });
+  };
   /* 돌아다니기: 같은 페어 친구들이 어디 있는지 (실제 픽셀 가운데 x) · 마주치면 반응 */
   var lastMeet = 0;
   function pairOfLabel(label) { var d = duoPair(), lab = shown(); if (!d || !P[label] || !P[label].pick) return null; return d.ids.indexOf(P[label].pick.id) >= 0 ? { d: d, lab: lab } : null; }
