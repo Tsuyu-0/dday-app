@@ -218,7 +218,9 @@
   }
   function talksFor(d) {
     var nA = nameOf(d.ids[0]), nB = nameOf(d.ids[1]), list;
-    var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? line(l[0], l[1], l[2], nA, nB) : line(l.w, l.t, l.s, nA, nB, l.m); }).filter(function (l) { return l && l.w < d.ids.length; }); };
+    // 말하는 사람은 캐릭터 id가 있으면 id로 (멤버 순서가 바뀌어도 대사가 섞이지 않게). 빠진 사람의 대사는 건너뛰어요
+    var who = function (l) { if (l.id) { var k = d.ids.indexOf(l.id); return k >= 0 ? k : -1; } return l.w || 0; };
+    var conv = function (c) { return c.map(function (l) { if (Array.isArray(l)) return line(l[0], l[1], l[2], nA, nB); var w = who(l); return w < 0 ? null : line(w, l.t, l.s, nA, nB, l.m); }).filter(function (l) { return l && l.w < d.ids.length; }); };
     if (Array.isArray(d.p.dialogs) && d.p.dialogs.length) list = d.p.dialogs.map(conv);
     else if (d.p.talks && d.p.talks.trim()) list = parseTalks(d.p.talks, d.ids, nA, nB);
     else list = DEF_DIALOGS.map(conv);

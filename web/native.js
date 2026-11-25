@@ -123,7 +123,7 @@
   function duoTalks(S, d) {
     var nA = nameOfTok(S, d.ids[0]), nB = nameOfTok(S, d.ids[1]);
     var one = function (w, t, sty, m) { t = String(t || "").replace(/\{A\}/g, nA).replace(/\{B\}/g, nB).trim(); if (!t || (w || 0) >= d.ids.length) return null; t = (STYLE_MARK[sty] || "") + t; return { w: w || 0, t: t, m: m || "" }; };
-    var conv = function (c) { return c.map(function (l) { return Array.isArray(l) ? one(l[0], l[1], l[2]) : one(l.w, l.t, l.s, l.m); }).filter(Boolean); };
+    var conv = function (c) { return c.map(function (l) { if (Array.isArray(l)) return one(l[0], l[1], l[2]); var w = l.id ? d.ids.indexOf(l.id) : (l.w || 0); return w < 0 ? null : one(w, l.t, l.s, l.m); }).filter(Boolean); };
     var src = Array.isArray(d.p.dialogs) && d.p.dialogs.length ? d.p.dialogs : DEF_DIALOGS;
     var list = src.map(conv).filter(function (c) { return c.length; }), base = list.length;
     try {

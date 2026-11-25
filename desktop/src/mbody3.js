@@ -388,7 +388,10 @@ function talksToDialogs(p,ids){
       if(w==null) w=next; next=1-w; var st=""; var pl=Z.parseLine(txt,"speech"); if(!pl.auto){ st=pl.style; txt=pl.text; }
       return {w:w,t:txt,s:st}; }).filter(Boolean); }).filter(function(c){return c.length});
 }
-function pairDialogs(p,ids){ if(!p.dialogs&&p.talks&&p.talks.trim()){ p.dialogs=talksToDialogs(p,ids); delete p.talks; } return p.dialogs||null; }
+/* 대화 한 마디의 말하는 사람: 캐릭터 id로 기억해요 (예전엔 몇 번째 사람인지만 기억해서, 멤버를 뺐다 넣으면 대사가 다른 사람한테 갔어요) */
+function dlW(l,ids){ var k=l&&l.id?ids.indexOf(l.id):-1; return k>=0?k:(l&&l.w||0); }
+function lockDialogs(p,ids){ var ch=false; (p.dialogs||[]).forEach(function(c){ (c||[]).forEach(function(l){ if(l&&!l.id&&ids[l.w||0]){ l.id=ids[l.w||0]; ch=true; } }); }); return ch; }
+function pairDialogs(p,ids){ if(!p.dialogs&&p.talks&&p.talks.trim()){ p.dialogs=talksToDialogs(p,ids); delete p.talks; } if(p.dialogs&&lockDialogs(p,ids)) setTimeout(function(){ saveSoon(); },0); return p.dialogs||null; }
 var WCOL=[["#9fb4ff","#eef3ff"],["#ffb3cb","#fff0f5"],["#9ee0b6","#eefbf2"],["#ffd28a","#fff7e8"],["#c6b2ff","#f4efff"]];
 var DLG_MO=[["","몸짓 없음"],["hop","통통"],["nod","끄덕"],["jump","펄쩍"],["dance","씰룩"],["shy","움찔"],["surprise","깜짝"],["spin","빙글"],["approach","다가가기"]];
 function dialogBox(p,ids,duoOn){
@@ -399,10 +402,10 @@ function dialogBox(p,ids,duoOn){
   if(D.length) h+='<div class="dl-tools"><button class="lk" data-act="dlfoldall">'+(D.every(function(c,i){return FD[i]})?"모두 펼치기":"모두 접기")+'</button><span class="sp"></span><button class="lk" data-act="talkexp">대화 내보내기</button><label class="lk">대화 불러오기<input type="file" class="talkimp" data-pid="'+p.id+'" accept=".ddtalk,.json,application/json" hidden></label></div>';
   else h+='<div class="dl-tools"><span class="sp"></span><label class="lk">대화 불러오기<input type="file" class="talkimp" data-pid="'+p.id+'" accept=".ddtalk,.json,application/json" hidden></label></div>';
   h+='<div class="dlgs">'+D.map(function(c,i){
-    if(FD[i]){ var f0=c[0]||{}, t0=tokById(ids[(f0.w||0)%n]);
+    if(FD[i]){ var f0=c[0]||{}, t0=tokById(ids[dlW(f0,ids)%n]);
       return '<div class="dlg2 folded" data-dlg="'+i+'"><button class="dlg2-h dl-fold" data-act="dlfold" data-i="'+i+'"><span class="chev">›</span><b>대화 '+(i+1)+'</b><span class="pv">'+esc((t0?(t0.nick||t0.name||"")+": ":"")+(f0.t||"(빈 대사)"))+'</span><span class="cnt">'+c.length+"마디</span></button></div>"; }
     return '<div class="dlg2" data-dlg="'+i+'"><div class="dlg2-h"><button class="dl-fold" data-act="dlfold" data-i="'+i+'" title="접기"><span class="chev open">›</span><b>대화 '+(i+1)+"</b></button>"+(live?'<button class="lk" data-act="dlgplay" data-i="'+i+'">▶ 들어 보기</button>':"")+'<button class="ib" data-act="dlgdel" data-i="'+i+'" title="이 대화 지우기">'+X+"</button></div>"+
-      c.map(function(l,j){ var w=(l.w||0)%n, sty=DLG_STY.filter(function(x){return x[0]===(l.s||"")})[0]||DLG_STY[0], mo=DLG_MO.filter(function(x){return x[0]===(l.m||"")})[0]||DLG_MO[0], cl=WCOL[w%5];
+      c.map(function(l,j){ var w=dlW(l,ids)%n, sty=DLG_STY.filter(function(x){return x[0]===(l.s||"")})[0]||DLG_STY[0], mo=DLG_MO.filter(function(x){return x[0]===(l.m||"")})[0]||DLG_MO[0], cl=WCOL[w%5];
         return '<div class="dl-row"><button class="dl-who" style="border-color:'+cl[0]+';background:'+cl[1]+'" data-act="dlwho" data-i="'+i+'" data-j="'+j+'" title="누르면 말하는 사람이 바뀌어요">'+who(w)+'</button><textarea class="in dl-t ln-t" rows="1" data-dl="'+i+"|"+j+'" placeholder="대사 · 엔터로 줄바꿈">'+esc(l.t)+'</textarea><button class="dl-sty s-'+(l.s||"speech")+'" data-act="dlsty" data-i="'+i+'" data-j="'+j+'" title="누르면 말풍선 모양이 바뀌어요">'+sty[1]+'</button><button class="dl-sty dl-mo'+(l.m?" on":"")+'" data-act="dlmo" data-i="'+i+'" data-j="'+j+'" title="누르면 몸짓이 바뀌어요">'+mo[1]+'</button><button class="ib" data-act="dldel" data-i="'+i+'" data-j="'+j+'" title="이 줄 지우기">'+X+"</button></div>"; }).join("")+
       '<button class="dl-add" data-act="dladd" data-i="'+i+'">＋ 한 마디</button></div>';
   }).join("")+"</div>";
@@ -963,7 +966,7 @@ app.addEventListener("click",function(e){
   var wsb=e.target.closest("[data-wstyle]"); if(wsb){ setCfg("widgetStyle",wsb.dataset.wstyle); saveSoon(true); render(); toast("위젯 모양을 바꿨어요 · 홈 화면에서 확인해 보세요"); return; }
   var th=e.target.closest("[data-theme]"); if(th){ setCfg("theme",th.dataset.theme); render(); return; }
   var sz=e.target.closest("[data-size]"); if(sz){ setSize(+sz.dataset.size); return; }
-  var mm=e.target.closest("[data-mem]"); if(mm){ var p=pairOf(mm), id=mm.dataset.mem, i=p.tokenIds.indexOf(id); if(i>=0) p.tokenIds.splice(i,1); else p.tokenIds.push(id); mm.classList.toggle("on"); saveSoon(); if(S.settings.duo===p.id||p.tokenIds.length<=3) render(); return; }
+  var mm=e.target.closest("[data-mem]"); if(mm){ var p=pairOf(mm), id=mm.dataset.mem; lockDialogs(p,p.tokenIds.filter(function(x){return tokById(x)})); var i=p.tokenIds.indexOf(id); if(i>=0) p.tokenIds.splice(i,1); else p.tokenIds.push(id); mm.classList.toggle("on"); saveSoon(); if(S.settings.duo===p.id||p.tokenIds.length<=3) render(); return; }
   var b=e.target.closest("[data-act]"); if(!b) return; var a=b.dataset.act;
   if(a==="new") addChooser();
   if(a==="main"&&t){ setCfg("main",t.id); render(); var pk2=pickNow(); toast(pk2&&pk2.anniv&&pk2.id!==t.id?"기본 캐릭터로 정했어요 · 오늘 기념일이 끝나면 나와요":"기본 캐릭터로 정했어요"); }
@@ -1009,14 +1012,14 @@ app.addEventListener("click",function(e){
     api.saveFile(fnE,JSON.stringify({format:"dday-talk",v:1,saved:new Date().toISOString(),pair:pe.name||"",speakers:spk,dialogs:DE})).then(function(ok){ if(ok) toast("대화 "+DE.length+"개를 파일로 만들었어요"); }); return; }
   if(/^(dlgadd|dlgdel|dlgdef|dladd|dldel|dlwho|dlsty|dlmo|dlgplay)$/.test(a)){ var pq=pairOf(b), ids2=pq.tokenIds.filter(function(id){return tokById(id)}).slice(0,5), D2=pairDialogs(pq,ids2)||[], i2=+b.dataset.i, j2=+b.dataset.j, c2=D2[i2];
     if(a==="dlgplay"){ saveSoon(true); setTimeout(function(){ setCfg("talkNow",{i:i2,at:Date.now()}); },300); return; }
-    if(a==="dlgadd") D2.push([{w:0,t:"",s:""},{w:1,t:"",s:""}]);
+    if(a==="dlgadd") D2.push([{w:0,id:ids2[0],t:"",s:""},{w:1,id:ids2[1],t:"",s:""}]);
     if(a==="dlgdef") D2=defDialogs();
     if(a==="dlgdel"){ D2.splice(i2,1); if(pq.dlgFold) pq.dlgFold.splice(i2,1); }
     if(a==="dlgadd"&&pq.dlgFold) pq.dlgFold.length=Math.min(pq.dlgFold.length,D2.length-1);
     if(a==="dlgdef") pq.dlgFold=[];
-    if(a==="dladd"&&c2){ var lw=c2.length?c2[c2.length-1].w||0:-1; c2.push({w:(lw+1)%Math.max(2,ids2.length),t:"",s:""}); }
+    if(a==="dladd"&&c2){ var lw=c2.length?dlW(c2[c2.length-1],ids2):-1, nw=(lw+1)%Math.max(2,ids2.length); c2.push({w:nw,id:ids2[nw],t:"",s:""}); }
     if(a==="dldel"&&c2){ c2.splice(j2,1); if(!c2.length) D2.splice(i2,1); }
-    if(a==="dlwho"&&c2&&c2[j2]) c2[j2].w=((c2[j2].w||0)+1)%Math.max(2,ids2.length);
+    if(a==="dlwho"&&c2&&c2[j2]){ var nw2=(dlW(c2[j2],ids2)+1)%Math.max(2,ids2.length); c2[j2].w=nw2; c2[j2].id=ids2[nw2]; }
     if(a==="dlmo"&&c2&&c2[j2]){ var km=DLG_MO.map(function(x){return x[0]}); c2[j2].m=km[(km.indexOf(c2[j2].m||"")+1)%km.length]; }
     if(a==="dlsty"&&c2&&c2[j2]){ var ks=DLG_STY.map(function(x){return x[0]}); c2[j2].s=ks[(ks.indexOf(c2[j2].s||"")+1)%ks.length]; }
     pq.dialogs=D2; delete pq.talks; saveSoon(true); render();
