@@ -93,6 +93,19 @@
     /* 끌기: 화면 밖으로는 못 나가요. 벽에 닿으면 어느 쪽인지 돌려줘요 (1 왼쪽 2 오른쪽 3 위 4 아래) */
     petDrag: function (dx, dy) { if (!dragFrom) return 0; return moveClamp(dragFrom.x + dx, dragFrom.y + dy); },
     petDragEnd: function () { dragFrom = null; refreshPos(); send("pet:dragend"); },
+    /* 떨어지기: 놓은 자리에서 화면 아래(작업 표시줄 위)까지 툭. 떨어질 게 없으면 false */
+    petFall: function (onStart, onLand) {
+      if (!bnd || !dragCur) return false;
+      var x = dragCur.x, y = dragCur.y, floor = bnd.y1, dist = floor - y, v = 0, last = performance.now();
+      if (dist < 6) return false;
+      dragFrom = { x: 0, y: 0 }; if (onStart) onStart(dist);
+      (function f(now) {
+        var dt = Math.min(32, now - last); last = now; v = Math.min(3.2, v + .0034 * dt); y += v * dt;
+        if (y >= floor) { moveClamp(x, floor); dragFrom = null; refreshPos(); send("pet:dragend"); if (onLand) onLand(dist); return; }
+        moveClamp(x, y); requestAnimationFrame(f);
+      })(last);
+      return true;
+    },
     /* 던지기: 놓는 순간의 빠르기로 미끄러지다가 벽에 부딪히면 onHit(쪽) */
     petThrow: function (vx, vy, onHit, onEnd) {
       var cx = dragCur ? dragCur.x : pos.x / k, cy = dragCur ? dragCur.y : pos.y / k, t0 = performance.now(), last = t0, hits = 0;

@@ -142,6 +142,7 @@ function basicSub(t){
     tile("o-tilt",!!m.idleTilt,"가끔 고개 까딱","가만히 있다가 고개를 좌우로 까딱까딱해요")+
     tile("o-shadow",!d.noShadow,"발밑 그림자","캐릭터 밑에 동그란 그림자를 깔아요")+
     tile("o-wander",!!d.wander,"돌아다니기","시메지처럼 화면 아래를 통통 튀며 걸어 다녀요")+
+    tile("o-fall",!d.noFall,"놓으면 아래로 떨어지기","들었다 놓으면 화면 아래로 툭 떨어져요. 높이서 떨어지면 아야! 끄면 놓은 자리에 그대로 있어요")+
     "</div>"+(d.wander?'<div class="lbl" style="margin-top:12px">걸음 빠르기</div><div class="chips">'+[[.7,"느릿느릿"],[1,"보통"],[1.4,"총총"]].map(function(v){ return '<button data-tile="o-wspd-'+v[0]+'"'+((d.wanderSpeed||1)===v[0]?' class="on"':"")+">"+v[1]+"</button>"; }).join("")+'</div><p class="note" style="margin-top:6px">마우스를 올리거나 말하는 중에는 멈춰요. 같은 페어가 같이 돌아다니면 가끔 서로 찾아가요.</p>':"")+"</div>"+bubBox(t)+
     '<div class="box"><div class="box-t">내보내기<small>그림 · 성격 · 말소리 · 대사까지 파일 하나로</small></div><p class="note" style="margin-bottom:10px">다른 컴퓨터나 폰(웹앱)으로 옮기거나 친구에게 줄 때 써요. 받은 쪽은 [설정 → 캐릭터 불러오기]로 넣어요. 기념일은 생일만 함께 가요.</p><div class="btns"><button class="btn" data-act="charexp">캐릭터 파일 만들기</button></div></div>'+
     '<div class="btns" style="justify-content:flex-end"><button class="btn ghost danger" data-act="del">이 캐릭터 지우기</button></div>';
@@ -955,7 +956,7 @@ function zk(el,attr){ return el.getAttribute(attr).split("|"); }
 function toggleTile(id){
   var t=cur(), c=S.settings||{};
   if(id.indexOf("o-")===0&&t){ t.desk=Object.assign({size:160},t.desk||{}); t.motion=t.motion||{};
-    if(id==="o-wander") t.desk.wander=!t.desk.wander; if(id.indexOf("o-wspd-")===0) t.desk.wanderSpeed=parseFloat(id.slice(7));
+    if(id==="o-wander") t.desk.wander=!t.desk.wander; if(id==="o-fall") t.desk.noFall=!t.desk.noFall; if(id.indexOf("o-wspd-")===0) t.desk.wanderSpeed=parseFloat(id.slice(7));
     if(id==="o-shadow") t.desk.noShadow=!t.desk.noShadow; if(id==="o-flip") t.desk.flip=!t.desk.flip; if(id==="o-lock") t.desk.lock=!t.desk.lock; if(id==="o-br") t.motion.breathe=t.motion.breathe===false; if(id==="o-idlev") t.idleVoice=!t.idleVoice; if(id==="o-fx") t.fxOff=!t.fxOff; if(id==="o-pet") t.petOff=!t.petOff; if(id==="o-tilt"){ t.motion.idleTilt=!t.motion.idleTilt; if(t.motion.idleTilt){ var st0=$("#zst .stage"); if(st0) Z.idleTilt(st0); } } saveSoon(true); render(); return; }
   if(id==="k-clicker"||id==="k-img"){ t.kind=id==="k-img"?"img":"clicker"; saveSoon(true); render(); return; }
   if(id==="s-pin") setCfg("pinned",c.pinned===false);

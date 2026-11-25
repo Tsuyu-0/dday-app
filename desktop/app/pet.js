@@ -100,6 +100,14 @@ function idleLoop(){
   },20000+Math.random()*40000);
 }
 
+/* ---------- 놓으면 아래로 툭 떨어지기 (캐릭터 설정에서 끌 수 있어요) ---------- */
+function dropFall(first){
+  var on=!(T&&T.desk&&T.desk.noFall)&&api.petFall;
+  var ok=on&&api.petFall(function(dist){ if(dist>260){ var L=["으아아~","으앗, 떨어진다!","꺄아~"]; say("!"+L[Math.floor(Math.random()*L.length)],false); } },
+    function(dist){ if(dist>260) Hang.bump(4,true); Hang.land(); });
+  if(!ok&&!first) Hang.land();
+  return !!ok;
+}
 /* ---------- 들어 올리면 대롱대롱 매달리고, 벽에 부딪히면 "아야!" ---------- */
 var Hang=(function(){
   var on=false, ang=0, av=0, tgt=0, pts=[], raf=0, bumpT=0;
@@ -180,7 +188,7 @@ function petting(e){
 window.addEventListener("mousedown",function(e){ if(e.target.closest&&e.target.closest(".bb-help")) return; if(e.button!==0||!over) return; down={x:e.screenX,y:e.screenY,e:e}; dragging=false; });
 window.addEventListener("mouseup",function(e){
   if(e.button!==0||!down) return;
-  if(dragging){ var v=Hang.release(); if(api.petThrow&&Math.hypot(v[0],v[1])>.55) api.petThrow(v[0],v[1],function(h){ Hang.bump(h,true); },function(){ Hang.land(); }); else { api.petDragEnd(); Hang.land(); } }
+  if(dragging){ var v=Hang.release(); if(api.petThrow&&Math.hypot(v[0],v[1])>.55) api.petThrow(v[0],v[1],function(h){ Hang.bump(h,true); },function(){ dropFall(); }); else if(!dropFall(true)){ api.petDragEnd(); Hang.land(); } }
   else { var p=norm(e); react(zoneAt(e)||"face",p[2],p[3]); if(api.petTapped) api.petTapped(); }
   down=null; dragging=false; setOver(hit(e));
 });

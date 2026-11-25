@@ -210,7 +210,7 @@ public class OverlayService extends Service {
                             if (mode == 2) {
                                 float fvx = 0, fvy = 0; if (vt != null) { vt.addMovement(e); vt.computeCurrentVelocity(1000); fvx = vt.getXVelocity(); fvy = vt.getYVelocity(); }
                                 hangVx = 0;
-                                if (Math.hypot(fvx, fvy) > 1300) fling(Pet.this, fvx, -fvy); else { hangLand(); keepInside(); prefsPos(); }
+                                if (Math.hypot(fvx, fvy) > 1300) fling(Pet.this, fvx, -fvy); else if (!fall(Pet.this)) { hangLand(); keepInside(); prefsPos(); }
                             } else if (mode == 3) { if (up) petEnd(); }
                             else if (!longed && up) { hideMenu(); motion("hop"); say(pickFor(lx, ly)); tapped(Pet.this); }
                             if (vt != null) { vt.recycle(); vt = null; }
@@ -565,13 +565,35 @@ public class OverlayService extends Service {
         });
         flinger.addListener(new android.animation.AnimatorListenerAdapter() {
             boolean done = false;
-            void fin() { if (done) return; done = true; flinger = null; hangVx = 0; hangLand(); keepInside(); prefsPos(); }
+            void fin() { if (done) return; done = true; flinger = null; hangVx = 0; if (!fall(who)) { hangLand(); keepInside(); prefsPos(); } }
             @Override public void onAnimationEnd(android.animation.Animator a) { fin(); }
             @Override public void onAnimationCancel(android.animation.Animator a) { fin(); }
         });
         flinger.start();
     }
     void stopFling() { if (flinger != null) flinger.cancel(); }
+    /** 놓으면 화면 아래로 툭 (캐릭터 설정 [놓으면 아래로 떨어지기]). 떨어질 게 없으면 false */
+    boolean fallOn = true;
+    boolean fall(final Pet who) {
+        if (!fallOn || gy < dp(6)) return false;
+        final int y0 = gy; final float[] st = { gy, 0 }; final long[] last = { android.os.SystemClock.uptimeMillis() };
+        if (y0 > dp(220)) { String[] L = { "으아아~", "으앗, 떨어진다!", "꺄아~" }; who.say("§s§" + L[rnd.nextInt(L.length)]); }
+        flinger = ValueAnimator.ofFloat(0f, 1f); flinger.setDuration(4000);
+        flinger.addUpdateListener(a -> {
+            long now = android.os.SystemClock.uptimeMillis(); float dt = Math.min(32, now - last[0]); last[0] = now;
+            st[1] = Math.min(3.4f * dm().density, st[1] + .0036f * dm().density * dt); st[0] -= st[1] * dt;
+            if (st[0] <= 0) { st[0] = 0; moveGroup(gx, 0); a.cancel(); return; }
+            moveGroup(gx, Math.round(st[0]));
+        });
+        flinger.addListener(new android.animation.AnimatorListenerAdapter() {
+            boolean done = false;
+            void fin() { if (done) return; done = true; flinger = null; if (y0 > dp(220)) { bumpAt = 0; bump(who, 4, true); } hangLand(); keepInside(); prefsPos(); }
+            @Override public void onAnimationEnd(android.animation.Animator a) { fin(); }
+            @Override public void onAnimationCancel(android.animation.Animator a) { fin(); }
+        });
+        flinger.start();
+        return true;
+    }
 
     /* 가로·세로를 바꾸거나 끌어다 놓으면: 다 같이 화면 안으로 */
     void keepInside() {
@@ -665,6 +687,7 @@ public class OverlayService extends Service {
         if (ov != null) {
             wander = ov.optBoolean("wander", false); wSpeed = (float) ov.optDouble("wspeed", 1); if (wSpeed <= 0) wSpeed = 1;
             Babble.quietInSilent = ov.optBoolean("quietSilent", false);
+            fallOn = ov.optBoolean("fall", true);
             duoAuto = ov.optBoolean("duoAuto", true); duoVoice = ov.optBoolean("duoVoice", true);
             dialogBase = ov.optInt("dialogBase", 0);
             JSONArray dl = ov.optJSONArray("dialogs");
