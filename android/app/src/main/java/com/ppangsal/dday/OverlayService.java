@@ -89,7 +89,8 @@ public class OverlayService extends Service {
         ObjectAnimator breathe;
         String name = "", greet = "", voice = "", zmap = "";
         float vPitch = 0, vSpeed = 1, vVol = .6f;
-        final List<String> lines = new ArrayList<>(), idle = new ArrayList<>(), bumpLines = new ArrayList<>();
+        final List<String> lines = new ArrayList<>(), idle = new ArrayList<>(), bumpLines = new ArrayList<>(), petLines = new ArrayList<>();
+        FrameLayout fxRoot; WindowManager.LayoutParams flp; String petShape = "heart"; int[] petCols; boolean petOff = false;
         final Map<String, List<String>> zoneLines = new HashMap<>();
         boolean idleVoice = false;
         final List<String> queue = new ArrayList<>(); boolean qQuiet = false;
@@ -116,7 +117,13 @@ public class OverlayService extends Service {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
             blp.gravity = Gravity.BOTTOM | Gravity.START; blp.x = ilp.x; blp.y = gy + sizePx;
 
+            // 쓰다듬기 하트 · 별이 뜨는 창 (눌리지 않아요)
+            fxRoot = new FrameLayout(OverlayService.this); fxRoot.setClipChildren(false);
+            flp = new WindowManager.LayoutParams(Math.round(sizePx * 1.6f), Math.round(sizePx * 1.6f), type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
+            flp.gravity = Gravity.BOTTOM | Gravity.START; flp.x = slot(idx) - (flp.width - sizePx) / 2; flp.y = gy + sizePx / 4;
             wm.addView(img, ilp);
+            wm.addView(fxRoot, flp);
             wm.addView(bubRoot, blp);
             img.setPivotY(sizePx); img.setPivotX(sizePx / 2f);
             breathe = ObjectAnimator.ofFloat(img, "scaleY", 1f, 0.975f);
@@ -129,16 +136,19 @@ public class OverlayService extends Service {
             if (breathe != null) breathe.cancel();
             try { wm.removeView(img); } catch (Exception e) { }
             try { wm.removeView(bubRoot); } catch (Exception e) { }
+            try { if (fxRoot != null) wm.removeView(fxRoot); } catch (Exception e) { }
         }
 
         void setSize() {
             ilp.width = sizePx; ilp.height = sizePx; img.setPivotY(sizePx); img.setPivotX(sizePx / 2f);
+            if (flp != null) { flp.width = Math.round(sizePx * 1.6f); flp.height = flp.width; }
         }
 
         /* 그림 창을 무리 자리로, 말풍선 창은 그 위로 */
         void move() {
             ilp.x = slot(idx); ilp.y = gy;
             try { wm.updateViewLayout(img, ilp); } catch (Exception e) { }
+            if (flp != null) { flp.x = slot(idx) - (flp.width - sizePx) / 2; flp.y = gy + sizePx / 4; try { wm.updateViewLayout(fxRoot, flp); } catch (Exception e) { } }
             placeTop(false);
         }
 
@@ -163,41 +173,85 @@ public class OverlayService extends Service {
         View.OnTouchListener touch() {
             final int slop = ViewConfiguration.get(OverlayService.this).getScaledTouchSlop();
             return new View.OnTouchListener() {
-                float sx, sy, lx, ly; int ox, oy; boolean drag, longed; android.view.VelocityTracker vt;
-                final Runnable lpress = () -> { longed = true; showMenu(); };
+                /* mode: 0 그냥 누름 · 1 움직이기 시작(끌기인지 쓰다듬기인지 보는 중) · 2 끌기 · 3 쓰다듬기 */
+                float sx, sy, lx, ly, lastRx; int ox, oy, mode, dirX, flips; long pendT, heartT; boolean longed; android.view.VelocityTracker vt;
+                final Runnable lpress = () -> { if (mode == 0) { longed = true; showMenu(); } };
                 @Override public boolean onTouch(View v, MotionEvent e) {
+                    long now = android.os.SystemClock.uptimeMillis();
                     switch (e.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
                             stopWalk(); touching = true; quietUntil = System.currentTimeMillis() + 5000;
                             lx = e.getX() / Math.max(1, v.getWidth()); ly = e.getY() / Math.max(1, v.getHeight());
-                            sx = e.getRawX(); sy = e.getRawY(); ox = gx; oy = gy; drag = false; longed = false;
+                            sx = e.getRawX(); sy = e.getRawY(); lastRx = sx; ox = gx; oy = gy; mode = 0; dirX = 0; flips = 0; longed = false;
                             stopFling(); if (vt != null) vt.recycle(); vt = android.view.VelocityTracker.obtain(); vt.addMovement(e);
                             h.postDelayed(lpress, 550); return true;
-                        case MotionEvent.ACTION_MOVE:
+                        case MotionEvent.ACTION_MOVE: {
                             float dx = e.getRawX() - sx, dy = e.getRawY() - sy;
                             if (vt != null) vt.addMovement(e);
-                            if (!drag && Math.abs(dx) + Math.abs(dy) > slop) { drag = true; h.removeCallbacks(lpress); for (Pet p : pets) p.hideMenu(); hangStart(); }
-                            if (drag) { // 같이 서 있는 친구들도 함께 옮겨요. 화면 끝에 닿으면 "아야!"
+                            // 좌우로 왔다 갔다 한 횟수 (쓰다듬기 알아보기)
+                            float mx = e.getRawX() - lastRx;
+                            if (Math.abs(mx) > dp(6)) { int d = mx > 0 ? 1 : -1; if (dirX != 0 && d != dirX) flips++; dirX = d; lastRx = e.getRawX(); }
+                            if (mode == 0 && Math.abs(dx) + Math.abs(dy) > slop) { mode = 1; pendT = now; h.removeCallbacks(lpress); }
+                            if (mode == 1) {
+                                if (flips >= 1 && !petOff && Math.abs(dy) < sizePx * .6f) { mode = 3; petStart(); }
+                                else if (now - pendT > 220 || Math.abs(dx) + Math.abs(dy) > dp(42)) { mode = 2; for (Pet p : pets) p.hideMenu(); hangStart(); }
+                            }
+                            if (mode == 2) { // 같이 서 있는 친구들도 함께 옮겨요. 화면 끝에 닿으면 "아야!"
                                 int side = moveGroup(Math.round(ox + dx), Math.round(oy - dy));
                                 if (side != 0) bump(Pet.this, side, false);
                                 if (vt != null) { vt.computeCurrentVelocity(1000); hangVx = vt.getXVelocity(); }
-                            }
+                            } else if (mode == 3 && now - heartT > 130) { heartT = now; spawnFx(e.getX() / Math.max(1, v.getWidth())); }
                             return true;
+                        }
                         case MotionEvent.ACTION_UP:
                         case MotionEvent.ACTION_CANCEL:
                             h.removeCallbacks(lpress); touching = false; quietUntil = System.currentTimeMillis() + 5000;
-                            if (drag) {
+                            boolean up = e.getActionMasked() == MotionEvent.ACTION_UP;
+                            if (mode == 2) {
                                 float fvx = 0, fvy = 0; if (vt != null) { vt.addMovement(e); vt.computeCurrentVelocity(1000); fvx = vt.getXVelocity(); fvy = vt.getYVelocity(); }
                                 hangVx = 0;
                                 if (Math.hypot(fvx, fvy) > 1300) fling(Pet.this, fvx, -fvy); else { hangLand(); keepInside(); prefsPos(); }
-                            }
+                            } else if (mode == 3) { if (up) petEnd(); }
+                            else if (!longed && up) { hideMenu(); motion("hop"); say(pickFor(lx, ly)); tapped(Pet.this); }
                             if (vt != null) { vt.recycle(); vt = null; }
-                            else if (!longed && e.getActionMasked() == MotionEvent.ACTION_UP) { hideMenu(); motion("hop"); say(pickFor(lx, ly)); tapped(Pet.this); }
                             return true;
                     }
                     return false;
                 }
             };
+        }
+
+        /* ---------- 쓰다듬기: 손가락으로 좌우로 슥슥 → 하트 · 별이 뿅뿅, 다 쓰다듬으면 좋아해요 ---------- */
+        void petStart() {
+            if (breathe != null) breathe.pause();
+            img.animate().scaleX(1.04f).scaleY(.95f).setDuration(160).start();
+            for (int i = 0; i < 3; i++) { final float fx = .35f + i * .15f; h.postDelayed(() -> spawnFx(fx), i * 90); }
+        }
+        void petEnd() {
+            img.animate().scaleX(1f).scaleY(1f).setDuration(260).setInterpolator(new android.view.animation.OvershootInterpolator(2.5f)).withEndAction(() -> { if (breathe != null) breathe.resume(); }).start();
+            motion("hop");
+            String[] D = { "헤헤, 좋다~", "간지러워!", "더 쓰다듬어 줘", "기분 좋아…" };
+            say(!petLines.isEmpty() ? petLines.get(rnd.nextInt(petLines.size())) : D[rnd.nextInt(D.length)]);
+        }
+        /** 하트(또는 별) 하나가 손가락 근처에서 올라가며 사라져요 */
+        void spawnFx(float fx) {
+            if (fxRoot == null) return;
+            int W = flp.width, H = flp.height, s = Math.max(dp(12), Math.round(sizePx * .16f * (.7f + rnd.nextFloat() * .6f)));
+            boolean star = "star".equals(petShape) || ("mix".equals(petShape) && rnd.nextBoolean());
+            int col;
+            if (petCols != null) col = petCols[rnd.nextInt(petCols.length)];
+            else if (star) col = new int[] { 0xFFFFD34D, 0xFFFFE58A, 0xFFFFB703 }[rnd.nextInt(3)];
+            else col = new int[] { 0xFFFF7FA8, 0xFFFFB3D0, 0xFFFF5C8A, 0xFFFFC6DC }[rnd.nextInt(4)];
+            FxShape v = new FxShape(OverlayService.this, star, col);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(s, s);
+            float cx = (W - sizePx) / 2f + Math.max(.1f, Math.min(.9f, fx)) * sizePx;
+            lp.leftMargin = Math.round(cx - s / 2f + (rnd.nextFloat() - .5f) * s * 1.4f);
+            lp.topMargin = Math.round(H - sizePx * .62f - s / 2f + (rnd.nextFloat() - .5f) * s * .6f);
+            fxRoot.addView(v, lp);
+            v.setRotation((rnd.nextFloat() * 2 - 1) * 22);
+            v.setScaleX(.4f); v.setScaleY(.4f);
+            v.animate().translationY(-dp(46) - rnd.nextInt(dp(24))).translationX((rnd.nextFloat() - .5f) * s * 2.4f).scaleX(1f).scaleY(1f).alpha(0f).setDuration(1050)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator()).withEndAction(() -> fxRoot.removeView(v)).start();
         }
 
         TextView menuBtn(String t, View.OnClickListener l) {
@@ -329,11 +383,34 @@ public class OverlayService extends Service {
             if (zl != null) { Iterator<String> it = zl.keys(); while (it.hasNext()) { String k = it.next(); JSONArray a = zl.optJSONArray(k); List<String> L = new ArrayList<>(); if (a != null) for (int i = 0; i < a.length(); i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) L.add(x); } if (!L.isEmpty()) zoneLines.put(k, L); } }
             idleVoice = o.optBoolean("idleVoice", false);
             JSONArray il = o.optJSONArray("idle"); if (il != null) for (int i = 0; i < il.length(); i++) { String x = il.optString(i, "").trim(); if (!x.isEmpty()) idle.add(x); }
+            petLines.clear(); JSONArray pl = o.optJSONArray("pet"); if (pl != null) for (int i = 0; i < pl.length(); i++) { String x = pl.optString(i, "").trim(); if (!x.isEmpty()) petLines.add(x); }
+            petOff = o.optBoolean("petOff", false); petShape = o.optString("petShape", "heart");
+            petCols = shades(o.optString("petColor", ""));
             bumpLines.clear(); JSONArray bl = o.optJSONArray("bump"); if (bl != null) for (int i = 0; i < bl.length(); i++) { String x = bl.optString(i, "").trim(); if (!x.isEmpty()) bumpLines.add(x); }
             JSONArray ls = o.optJSONArray("lines"); if (ls != null) for (int i = 0; i < ls.length(); i++) { String x = ls.optString(i, "").trim(); if (!x.isEmpty()) lines.add(x); }
             greet = o.optString("greet", ""); name = o.optString("name", "");
             voice = o.optString("voice", ""); vPitch = (float) o.optDouble("pitch", 0); vSpeed = (float) o.optDouble("speed", 1); vVol = (float) o.optDouble("vol", .6);
         }
+    }
+
+    /** 고른 색 하나로 진하고 연한 네 가지 (PC와 같아요) */
+    static int[] shades(String hex) {
+        if (hex == null || !hex.matches("#?[0-9a-fA-F]{6}")) return null;
+        int c = (int) Long.parseLong(hex.replace("#", ""), 16), r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+        float[][] t = { { 0, 0 }, { .45f, 1 }, { -.15f, 0 }, { .65f, 1 } }; int[] out = new int[4];
+        for (int i = 0; i < 4; i++) { float k = t[i][0]; int[] v = { r, g, b }; for (int j = 0; j < 3; j++) v[j] = Math.round(k > 0 ? v[j] + (255 - v[j]) * k : v[j] * (1 + k)); out[i] = 0xFF000000 | (v[0] << 16) | (v[1] << 8) | v[2]; }
+        return out;
+    }
+    /** 하트 · 별 모양 하나 (하얀 테두리) */
+    static class FxShape extends View {
+        final android.graphics.Paint f = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG), st = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        final android.graphics.Path p = new android.graphics.Path();
+        FxShape(Context c, boolean star, int col) {
+            super(c); f.setColor(col); st.setColor(Color.WHITE); st.setStyle(android.graphics.Paint.Style.STROKE); st.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            if (star) { float[] P = { 12,2.6f, 14.75f,8.6f, 21.3f,9.25f, 16.37f,13.62f, 17.8f,20.05f, 12,16.7f, 6.2f,20.05f, 7.63f,13.62f, 2.7f,9.25f, 9.25f,8.6f }; p.moveTo(P[0], P[1]); for (int i = 2; i < P.length; i += 2) p.lineTo(P[i], P[i + 1]); p.close(); }
+            else { p.moveTo(12, 21); p.cubicTo(5, 16.5f, 2.5f, 12.5f, 3.5f, 8.5f); p.cubicTo(4.5f, 5, 9, 4.2f, 12, 7.6f); p.cubicTo(15, 4.2f, 19.5f, 5, 20.5f, 8.5f); p.cubicTo(21.5f, 12.5f, 19, 16.5f, 12, 21); p.close(); }
+        }
+        @Override protected void onDraw(android.graphics.Canvas cv) { float k = getWidth() / 24f; cv.save(); cv.scale(k, k); st.setStrokeWidth(1.6f); cv.drawPath(p, f); cv.drawPath(p, st); cv.restore(); }
     }
 
     /* ================= 무리 전체 ================= */

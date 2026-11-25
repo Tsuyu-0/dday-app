@@ -105,7 +105,7 @@
     var st = S.settings || {};
     return { name: t.nick || t.name || "", lines: out.filter(Boolean).slice(0, 80), greet: greet,
       voice: !st.mute && t.babble && t.babble !== "none" ? t.babble : "", pitch: t.babblePitch || 0, speed: t.babbleSpeed || 1, vol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6,
-      bump: (t.bumpLines || []).map(function (x) { return String(x || "").trim(); }).filter(Boolean), quietSilent: !!st.ovQuietSilent, wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1,
+      pet: (t.petLines || []).map(function (x) { return String(x || "").trim(); }).filter(Boolean), petOff: !!t.petOff, petShape: t.petShape || "heart", petColor: t.petColor || "", bump: (t.bumpLines || []).map(function (x) { return String(x || "").trim(); }).filter(Boolean), quietSilent: !!st.ovQuietSilent, wander: !!(t.desk && t.desk.wander), wspeed: (t.desk && t.desk.wanderSpeed) || 1,
       idle: (t.idleLines || []).map(function (x) { return clean(x, "thought"); }).filter(Boolean).slice(0, 60), idleVoice: !!t.idleVoice,
       zl: (function () { var o = {}; Object.keys(t.zones || {}).forEach(function (k) { var a = ((t.zones[k] || {}).lines || []).map(function (x) { return clean(x, zdef(k)); }).filter(Boolean); if (a.length) o[k] = a; }); return o; })() };
   }
