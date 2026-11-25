@@ -831,3 +831,18 @@ body.dark .fb-note{background:rgba(255,170,60,.12);color:#ffcf8a}
 .tr-ri span{grid-row:1/3;grid-column:2;font-size:12px;font-weight:700;color:var(--accent,#4f7cff)}
 .tr-ri:hover{border-color:var(--accent,#4f7cff)}
 .tr-alt{display:flex;flex-wrap:wrap;gap:6px}
+
+/* 홈: 짧은 시작 안내 */
+.onb-s{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px}
+.onb-sl{display:flex;flex-direction:column;gap:3px}.onb-sl b{font-size:14.5px}.onb-sl span{font-size:12.5px;color:var(--dim)}
+.onb-sb{display:flex;align-items:center;gap:10px}
+.home>div>.onb{margin-top:14px}
+/* 기념일 당일 축하 카드 */
+.celeb-ov{position:fixed;inset:0;z-index:9000;background:rgba(15,20,32,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:celIn .25s ease}
+@keyframes celIn{from{opacity:0}}
+.celeb-in{display:flex;flex-direction:column;align-items:center;gap:12px;max-height:100%}
+.celeb-k{color:#fff;font-size:20px;font-weight:800;text-shadow:0 2px 10px rgba(0,0,0,.25)}
+.celeb-img{width:min(420px,calc(100vw - 40px),calc((100vh - 170px) * .8));aspect-ratio:4/5;border-radius:18px;overflow:hidden;background:var(--panel);display:grid;place-items:center;box-shadow:0 20px 50px rgba(0,0,0,.3);animation:celPop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes celPop{from{transform:scale(.8) rotate(-3deg);opacity:0}}
+.celeb-img img{width:100%;height:100%;display:block}
+.celeb-b{display:flex;gap:8px}

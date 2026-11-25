@@ -68,6 +68,19 @@
     version: function () { return Promise.resolve("웹 1.0"); },
     saveImage: function (d) { return Promise.resolve(d); },
     saveSound: function (d) { return Promise.resolve(d); },
+    /* 그림(PNG) 저장: 폰은 [기기에 저장 · 다른 앱으로 보내기], 웹은 내려받기 */
+    savePng: function (name, dataUrl) {
+      var C = window.Capacitor, b64 = String(dataUrl || "").replace(/^data:[^,]*,/, "");
+      if (C && C.isNativePlatform && C.isNativePlatform()) {
+        var REG = window.ddPlugin || (window.capacitorExports && window.capacitorExports.registerPlugin) || C.registerPlugin, FS = REG("Filesystem"), SH = REG("Share"), W = REG("DdayWidget");
+        return pickSave(name).then(function (ch) {
+          if (ch === "save") return W.saveDoc({ name: name, b64: b64, mime: "image/png" }).then(function (r) { return !!(r && r.ok); }).catch(function () { return false; });
+          if (ch === "share") return FS.writeFile({ path: name, data: b64, directory: "CACHE" }).then(function (r) { return SH.share({ title: name, files: [r.uri], dialogTitle: "그림 보내기" }); }).then(function () { return true; }).catch(function () { return false; });
+          return false;
+        });
+      }
+      try { var a = document.createElement("a"); a.href = dataUrl; a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 500); return Promise.resolve(true); } catch (e) { return Promise.resolve(false); }
+    },
     saveFile: function (name, text) {
       var C = window.Capacitor;
       if (C && C.isNativePlatform && C.isNativePlatform()) {

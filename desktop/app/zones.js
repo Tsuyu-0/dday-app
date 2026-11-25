@@ -414,5 +414,6 @@ Z.typeOut=function(sp,text,voice,vol,style,opt){
 };
 /* 가만히 있을 때 고개 까딱 */
 Z.idleTilt=function(stage){ if(stage.getAttribute("data-face")||stage.className.indexOf("m-")>=0) return; stage.classList.add("m-tilt"); setTimeout(function(){ stage.classList.remove("m-tilt"); },1250); };
+Z.loadImg=load; /* 캔버스에 그려도 픽셀을 읽을 수 있게 그림 읽기 (기념일 카드 저장용) */
 g.Zones=Z;
 })(window);

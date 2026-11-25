@@ -549,7 +549,9 @@ function anItem(x){
 /* ---------- 홈 ---------- */
 function hasSamples(){ return (S.annivs||[]).some(function(a){return a.sample}) || (S.events||[]).some(function(e){return e.sample}); }
 function isSampleOnly(){ return !(S.tokens||[]).some(function(t){ return ["t-nia2","t-bald"].indexOf(t.id)<0; }); }
+var OBOPEN=false;
 function onboardBox(){
+  if(!OBOPEN) return '<div class="box onb onb-s"><div class="onb-sl"><b>내 캐릭터부터 넣어 볼까요?</b><span>이름이랑 생일만 넣으면 생일이 기념일로 들어가요</span></div><div class="onb-sb"><button class="btn pri" data-act="ob-open">＋ 내 캐릭터 만들기</button><button class="lnk" data-act="ob-skip">나중에</button></div></div>';
   return '<div class="box onb"><div class="box-t"><span class="en">START</span>내 캐릭터부터 넣어 볼까요?<small><button class="lnk" data-act="ob-skip">나중에</button></small></div>'+
     '<p class="note" style="margin:-4px 0 12px">이름이랑 생일만 넣어도 생일이 기념일로 들어가요. 그날이 되면 그 캐릭터가 바탕화면에 나와서 축하해 줘요.</p>'+
     '<div class="onb-f"><label class="fld">이름<input class="in" id="ob-name" placeholder="예: 하루"></label>'+
@@ -557,6 +559,68 @@ function onboardBox(){
     '<label class="fld">그림 (선택)<span class="obpic"><input type="file" accept="image/*" id="ob-img"><span id="ob-imgname">배경 투명 PNG 한 장</span></span></label></div>'+
     '<div class="btns" style="margin-top:4px;justify-content:space-between">'+(hasSamples()?'<button class="lnk" data-act="smp-del">예시 기념일 · 일정 지우기</button>':"<span></span>")+'<button class="btn pri" data-act="ob-go">만들기</button></div></div>';
 }
+/* ---------- 기념일 당일: 축하 카드 (트위터에 올리기 좋은 4:5 그림) ---------- */
+function celebMembers(a){ var w=a.who||{}, ids=[];
+  if(w.type==="pair"){ var p=(S.pairs||[]).filter(function(x){ return x.id===w.id; })[0]; ids=((p&&p.tokenIds)||[]).filter(function(id){ return tokById(id); }).slice(0,2); }
+  if(!ids.length){ var sid=AN.starOf(S,a)||(S.settings||{}).main||(S.tokens[0]&&S.tokens[0].id); if(tokById(sid)) ids=[sid]; }
+  return ids.map(tokById); }
+function tokCanvasImg(t){ /* 파츠를 겹쳐 한 장으로 */
+  if(!t) return Promise.resolve(null); var p=t.parts||{}, srcs=(t.kind==="img"||!p.head1)?[t.img&&t.img.src]:["back","tail","foot","body","hand","head1","ear"].map(function(k){ return p[k]&&p[k].src; });
+  var L=Z.loadImg||function(u){ return new Promise(function(r){ var i=new Image(); i.onload=function(){r(i)}; i.onerror=function(){r(null)}; i.src=u; }); };
+  return Promise.all(srcs.filter(Boolean).map(L)).then(function(ims){ ims=ims.filter(Boolean); if(!ims.length) return null; var w0=ims[0].naturalWidth, h0=ims[0].naturalHeight, c=document.createElement("canvas"); c.width=w0; c.height=h0; var g=c.getContext("2d"); ims.forEach(function(im){ g.drawImage(im,0,0,w0,h0); }); return c; });
+}
+function celebCard(a,n){
+  var W=1080, H=1350, c=document.createElement("canvas"); c.width=W; c.height=H; var g=c.getContext("2d");
+  var mem=celebMembers(a), col=(mem[0]&&mem[0].color)||"#ff7aa8", col2=(mem[1]&&mem[1].color)||"#ffb86b";
+  var FF=getComputedStyle(document.body).fontFamily||"sans-serif";
+  return Promise.all(mem.map(tokCanvasImg)).then(function(ims){
+    /* 배경: 캐릭터 색 → 하양 */
+    var bg=g.createLinearGradient(0,0,0,H); bg.addColorStop(0,tint(col,.32)); bg.addColorStop(.55,tint(col2,.14)); bg.addColorStop(1,"#ffffff"); g.fillStyle=bg; g.fillRect(0,0,W,H);
+    /* 반짝이 · 꽃가루 (같은 기념일은 늘 같은 무늬) */
+    var sd=0; String(a.id+n.label).split("").forEach(function(ch){ sd=(sd*31+ch.charCodeAt(0))>>>0; }); var rnd=function(){ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+    var CF=[col,col2,"#ffd166","#7bdff2","#ff8fab","#b5a8ff"];
+    for(var i=0;i<70;i++){ var x=rnd()*W, y=rnd()*H*.62, s=6+rnd()*16; if(y>140&&y<370&&x>120&&x<W-120){ y=y<255?60+rnd()*70:380+rnd()*40; } g.save(); g.translate(x,y); g.rotate(rnd()*6.3); g.globalAlpha=.55+rnd()*.4; g.fillStyle=CF[i%CF.length];
+      if(i%3===0){ g.beginPath(); for(var k=0;k<10;k++){ var r=k%2?s*.45:s; g.lineTo(Math.cos(k*Math.PI/5)*r,Math.sin(k*Math.PI/5)*r); } g.closePath(); g.fill(); } else if(i%3===1) g.fillRect(-s/2,-s/5,s,s/2.5); else { g.beginPath(); g.arc(0,0,s/2.4,0,7); g.fill(); } g.restore(); }
+    g.globalAlpha=1;
+    /* 위: 날짜 · 이름 · 기념일 */
+    var d=n.date instanceof Date?n.date:new Date(), ds=d.getFullYear()+". "+(d.getMonth()+1)+". "+d.getDate();
+    g.textAlign="center"; g.fillStyle="rgba(30,36,50,.55)"; g.font="600 34px "+FF; g.fillText(ds,W/2,118);
+    var who=AN.whoName(S,a.who)||"", label=n.label&&n.label!==a.title?a.title+" "+n.label:a.title;
+    g.fillStyle="#1d2433"; g.font="800 72px "+FF; fitText(g,who,W-160,72,"800",FF); g.fillText(who,W/2,212);
+    g.fillStyle=mixHex(col,"#ff4f8b",.45); fitText(g,label,W-140,118,"900",FF); g.fillText(label,W/2,340);
+    /* 가운데: 캐릭터 (뒤에 하얀 동그라미) */
+    var cy=740, R=330; g.fillStyle="rgba(255,255,255,.75)"; g.beginPath(); g.arc(W/2,cy,R,0,7); g.fill();
+    g.strokeStyle=tint(col,.5); g.lineWidth=6; g.setLineDash([2,18]); g.lineCap="round"; g.beginPath(); g.arc(W/2,cy,R+22,0,7); g.stroke(); g.setLineDash([]);
+    var good=ims.filter(Boolean), boxW=good.length>1?440:620, boxH=640;
+    good.forEach(function(im,i){ var k=Math.min(boxW/im.width,boxH/im.height), w=im.width*k, h=im.height*k, x=good.length>1?(i?W/2-30:W/2-w+30):(W-w)/2; g.drawImage(im,good.length>1?(i?W/2-20:W/2-w+20):(W-w)/2,cy+R-h+40,w,h); });
+    /* 아래: 한마디 말풍선 */
+    var line=(a.lines&&a.lines.length?a.lines[0]:AN.defaultLine(S,a,n))||"";
+    g.font="700 40px "+FF; var lines=wrapText(g,line,W-260).slice(0,2), bh=60+lines.length*54, by=1110;
+    g.fillStyle="#fff"; g.shadowColor="rgba(20,30,50,.12)"; g.shadowBlur=30; g.shadowOffsetY=8; roundRect(g,110,by,W-220,bh,46); g.fill(); g.shadowColor="transparent";
+    g.beginPath(); g.moveTo(W/2-20,by+2); g.lineTo(W/2,by-24); g.lineTo(W/2+20,by+2); g.fill();
+    g.fillStyle="#1d2433"; lines.forEach(function(t,i){ g.fillText(t,W/2,by+30+42+i*54); });
+    g.fillStyle="rgba(30,36,50,.35)"; g.font="600 26px "+FF; g.fillText("기념일 D-day",W/2,H-38);
+    return c.toDataURL("image/png");
+  });
+}
+function fitText(g,t,maxW,size,wt,FF){ var s=size; g.font=wt+" "+s+"px "+FF; while(s>28&&g.measureText(t).width>maxW){ s-=4; g.font=wt+" "+s+"px "+FF; } }
+function wrapText(g,t,maxW){ var out=[], cur=""; Array.from(String(t)).forEach(function(ch){ var nx=cur+ch; if(g.measureText(nx).width>maxW&&cur){ out.push(cur); cur=ch.trim()?ch:""; } else cur=nx; }); if(cur) out.push(cur); return out; }
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function mixHex(a,b,t){ var p=function(h){ h=String(h||"#888").replace("#",""); if(h.length===3) h=h.split("").map(function(x){return x+x}).join(""); return [0,2,4].map(function(i){ return parseInt(h.substr(i,2),16)||0; }); }, A=p(a), B=p(b); return "rgb("+A.map(function(v,i){ return Math.round(v*(1-t)+B[i]*t); }).join(",")+")"; }
+function showCeleb(a,n){
+  var ov=document.createElement("div"); ov.className="celeb-ov"; ov.innerHTML='<div class="celeb-in"><div class="celeb-k">🎉 오늘이에요!</div><div class="celeb-img"><span class="note">카드 만드는 중…</span></div><div class="celeb-b"><button class="btn pri" data-c="save">그림으로 저장</button><button class="btn" data-c="x">닫기</button></div></div>';
+  document.body.appendChild(ov); var url=null;
+  if(window.Zones&&Zones.celebrate) try{ Zones.celebrate(ov); }catch(e){}
+  celebCard(a,n).then(function(u){ url=u; ov.querySelector(".celeb-img").innerHTML='<img src="'+u+'" alt="">'; }).catch(function(){ ov.querySelector(".celeb-img").innerHTML='<span class="note">카드를 만들지 못했어요</span>'; });
+  ov.addEventListener("click",function(e){ var b=e.target.closest("button"); if(e.target===ov||(b&&b.dataset.c==="x")){ ov.remove(); return; }
+    if(b&&b.dataset.c==="save"&&url){ var fn=((AN.whoName(S,a.who)||"")+"-"+a.title+(n.label&&n.label!==a.title?"-"+n.label:"")).replace(/[\\/:*?"<>|\s]+/g,"_")+".png";
+      (api.savePng?api.savePng(fn,url):Promise.resolve(false)).then(function(ok){ if(ok) toast("저장했어요"); }); } });
+}
+/* 그날 처음 홈을 열면 한 번 저절로 */
+function maybeCeleb(){ var ups=AN.upcoming(S).filter(function(x){ return x.n.days===0; }); if(!ups.length) return; var x=ups[0], key="dd-cel-"+ymdOf(new Date())+"-"+x.a.id;
+  try{ if(localStorage.getItem(key)) return; localStorage.setItem(key,"1"); }catch(e){ return; }
+  setTimeout(function(){ showCeleb(x.a,x.n); },600); }
+
 function homeView(){
   var now=new Date(), today=ymdOf(now), on=AN.on(S,today);
   var ups=AN.upcoming(S).filter(function(x){ return x.n.days>=0; }), nx=ups[0];
@@ -569,14 +633,13 @@ function homeView(){
       '<div class="nh-t"><span class="nh-k">'+(isToday?"오늘이에요!":"다음 기념일")+'</span><b class="nh-title">'+esc(title)+'</b>'+
       '<span class="nh-dd">'+esc(AN.ddayText(n))+'</span><span class="nh-date">'+fmtDay(ymdOf(n.date))+" · "+repName(a)+(AN.isSince(a)&&AN.since(a)>0?" · 오늘로 "+AN.since(a)+"일째":"")+'</span>'+
       '<span class="nh-q">“'+esc(line)+'”</span>'+
-      '<span class="btns" style="margin-top:12px">'+(ht?'<button class="btn" data-act="hpoke" data-tid="'+ht.id+'">말 걸어 보기</button>':"")+'<button class="btn ghost" data-ann="'+esc(a.id)+'">기념일 열기</button></span></div></div>';
+      '<span class="btns" style="margin-top:12px">'+(isToday?'<button class="btn pri" data-act="celeb" data-ann="'+esc(a.id)+'">🎉 기념일 카드</button>':"")+(ht?'<button class="btn" data-act="hpoke" data-tid="'+ht.id+'">말 걸어 보기</button>':"")+'<button class="btn ghost" data-ann="'+esc(a.id)+'">기념일 열기</button></span></div></div>';
   } else hero='<div class="nexthero empty"><div class="nh-t"><span class="nh-k">다음 기념일</span><b class="nh-title">아직 기념일이 없어요</b><span class="nh-date">캐릭터 생일을 넣거나, 처음 만난 날 같은 기념일을 추가해 보세요.</span><span class="btns" style="margin-top:12px"><button class="btn pri" data-act="annadd">＋ 기념일</button></span></div></div>';
   var cards=ups.slice(1,7);
   var todayEv=on.events.map(function(e){ return evRow(e,0); }).join("");
   var soonEv=AN.events(S).filter(function(x){ return x.days>0&&x.days<=21; }).slice(0,6).map(function(x){ return evRow(x.e,x.days); }).join("");
   return '<div class="wrap wide">'+updBanner()+'<div class="today-h"><span class="big">'+(now.getMonth()+1)+"월 "+now.getDate()+'일</span><span class="wd">'+WD[now.getDay()]+'요일</span></div>'+
-    (!(S.settings||{}).onboardDone&&isSampleOnly()?onboardBox():"")+
-    '<div class="home"><div>'+hero+
+    '<div class="home"><div>'+hero+(!(S.settings||{}).onboardDone&&isSampleOnly()?onboardBox():"")+
     (cards.length?'<div class="sec-t" style="margin-top:18px">그다음 기념일</div><div class="agrid sm">'+cards.map(annCard).join("")+"</div>":"")+
     '</div><div>'+
     '<div class="box"><div class="box-t"><span class="en">TODAY</span>오늘 일정</div>'+(todayEv||'<p class="note">오늘은 일정이 없어요.</p>')+"</div>"+
@@ -821,6 +884,7 @@ function render(){
   $("#crumb").textContent=VIEW==="char"?(t?"캐릭터 · "+(t.nick||t.name||"이름 없음"):"캐릭터"):({home:"홈",cal:"다이어리 달력",events:"일정",pair:"페어",anniv:"기념일",track:"작업 기록",set:"설정"})[VIEW]||"";
   if(VIEW==="char"&&t) drawZones();
   if(VIEW==="home"&&t) ZMAP=null;
+  if(VIEW==="home"&&!COMPACT) maybeCeleb();
   if(VIEW==="set") ovSync();
   clearInterval(TRT); if(VIEW==="track"){ if(!TRD) trLoad(); TRT=setInterval(trLoad,5000); } if(VIEW==="cal"&&window.__TAURI__){ trLoad(); TRT=setInterval(trLoad,30000); }
   $$('input[type=range]').forEach(fillRange);
@@ -953,6 +1017,8 @@ app.addEventListener("click",function(e){
     pq.dialogs=D2; delete pq.talks; saveSoon(true); render();
     if(a==="dladd"||a==="dlgadd"){ var ii=a==="dlgadd"?D2.length-1:i2, rows=$$('[data-pair="'+pq.id+'"] [data-dlg="'+ii+'"] .dl-t'), tgt=a==="dlgadd"?rows[0]:rows[rows.length-1]; if(tgt) tgt.focus(); }
     return; }
+  if(a==="ob-open"){ OBOPEN=true; render(); var on=$("#ob-name"); if(on) on.focus(); return; }
+  if(a==="celeb"){ var cx=AN.upcoming(S).filter(function(x){ return x.n.days===0&&x.a.id===b.dataset.ann; })[0]; if(cx) showCeleb(cx.a,cx.n); return; }
   if(a==="agtab"){ AGTAB=b.dataset.t; try{ localStorage.setItem("dd-agtab",AGTAB); }catch(e){} render(); return; }
   if(a==="tradd"&&TRD){ trAdd(b.dataset.exe,b.dataset.name); return; }
   if(a==="trpick"){ TRPICK=true; TRQ=""; trRun(); render(); return; }

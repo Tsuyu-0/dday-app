@@ -66,6 +66,7 @@
     onTrack: on("track"),
     openFolder: function () { send("folder:open"); },
     saveFile: function (name, text) { return call("file:save", name, text); },
+    savePng: function (name, dataUrl) { return call("file:png", name, dataUrl); },
     petToken: function () { return call("pet:token"); },
     onPetToken: on("pet:token"),
     onPetSay: on("pet:say"),

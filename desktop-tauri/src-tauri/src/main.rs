@@ -95,6 +95,15 @@ async fn save_file(app: tauri::AppHandle, name: String, filter: String, ext: Str
     }
 }
 
+/// 그림(PNG) 저장: 저장 위치 고르기 창
+#[tauri::command]
+async fn save_png(app: tauri::AppHandle, name: String, b64: String) -> bool {
+    use base64::Engine;
+    let bytes = match base64::engine::general_purpose::STANDARD.decode(b64.as_bytes()) { Ok(b) => b, Err(_) => return false };
+    let picked = app.dialog().file().set_file_name(&name).add_filter("그림", &["png"]).blocking_save_file();
+    match picked.and_then(|p| p.into_path().ok()) { Some(p) => fs::write(p, bytes).is_ok(), None => false }
+}
+
 #[tauri::command]
 fn open_folder(app: tauri::AppHandle) { let _ = app.opener().open_path(data_dir().to_string_lossy().to_string(), None::<&str>); }
 
@@ -154,7 +163,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop, track_get, track_set, track_running, track_front])
+        .invoke_handler(tauri::generate_handler![log, data_path, read_state, write_state, save_blob, read_b64, save_file, save_png, open_folder, open_url, notify, set_autostart, started_hidden, quit_app, walk_move, walk_stop, track_get, track_set, track_running, track_front])
         .setup(|_app| { track::start(data_dir()); Ok(()) })
         .on_window_event(|w, e| {
             // 관리 창 X → 끄지 않고 숨겨서 트레이에 남아요

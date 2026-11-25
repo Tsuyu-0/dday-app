@@ -379,6 +379,7 @@
       return invoke("read_b64", { path: p }).then(function (b) { return b ? "data:" + MIME[found[u]] + ";base64," + b : u; }).catch(function () { return u; });
     })).then(function (vals) { keys.forEach(function (k, i) { text = text.split(k).join(vals[i]); }); return text; });
   }
+  handlers["file:png"] = function (name, dataUrl) { return invoke("save_png", { name: name, b64: String(dataUrl || "").replace(/^data:[^,]*,/, "") }); };
   handlers["file:save"] = function (name, text) {
     var share = /\.dday$/.test(name), chr = /\.ddchar$/.test(name);
     var f = share ? ["일정 공유 파일", "dday"] : chr ? ["캐릭터 파일", "ddchar"] : ["JSON", "json"];

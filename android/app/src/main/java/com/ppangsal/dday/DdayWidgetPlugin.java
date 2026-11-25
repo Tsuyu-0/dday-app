@@ -119,7 +119,7 @@ public class DdayWidgetPlugin extends Plugin {
     public void saveDoc(PluginCall call) {
         Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
-        i.setType("application/octet-stream");
+        i.setType(call.getString("mime", "application/octet-stream"));
         i.putExtra(Intent.EXTRA_TITLE, call.getString("name", "file.json"));
         startActivityForResult(call, i, "saveDocDone");
     }
@@ -131,7 +131,8 @@ public class DdayWidgetPlugin extends Plugin {
         Uri u = r.getData().getData();
         try (OutputStream os = getContext().getContentResolver().openOutputStream(u, "wt")) {
             if (os == null) throw new Exception("no stream");
-            os.write(call.getString("text", "").getBytes(StandardCharsets.UTF_8));
+            String b64 = call.getString("b64", null);
+            os.write(b64 != null ? Base64.decode(b64, Base64.DEFAULT) : call.getString("text", "").getBytes(StandardCharsets.UTF_8));
             o.put("ok", true); call.resolve(o);
         } catch (Exception e) { call.reject("저장하지 못했어요: " + e.getMessage()); }
     }
