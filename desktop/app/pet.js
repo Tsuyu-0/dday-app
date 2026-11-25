@@ -167,7 +167,7 @@ function rubTrack(e){
 function petting(e){
   var now=Date.now(), size=stage.offsetWidth, p=norm(e);
   if(!rub.on){ rub.on=true; stage.classList.add("m-pet"); var c=T._cfg||{}; if(!c.mute) Z.sound("sparkle",c.volume*.6); }
-  if(now-rub.heartT>140){ rub.heartT=now; Z.hearts(stage,p[2],Math.min(p[3],size*.45),size,1); }
+  if(now-rub.heartT>140){ rub.heartT=now; Z.hearts(stage,p[2],Math.min(p[3],size*.45),size,1,{color:T.petColor,shape:T.petShape}); }
   clearTimeout(rub.endT);
   rub.endT=setTimeout(function(){
     rub.on=false; stage.classList.remove("m-pet"); rub.flips=[];

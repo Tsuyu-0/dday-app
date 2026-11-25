@@ -294,7 +294,9 @@ function talkSub(t){
       '<div class="tiles" style="margin-top:12px;grid-template-columns:1fr">'+tile("o-idlev",!!t.idleVoice,"가만히 있을 때도 말소리 내기","꺼 두면 혼잣말은 글자만 조용히 떠요. 누르거나 알림이 올 때만 소리가 나요")+'</div>':"")+'</div>'+
     '<div class="box"><div class="box-t">누를 때 소리</div>'+vchips+'</div>'+
     '<div class="box"><div class="box-t">누를 때 효과 · 쓰다듬기</div><div class="tiles" style="grid-template-columns:1fr">'+tile("o-fx",!t.fxOff,"누르면 효과 띄우기","하트 · 별 같은 아이콘이 뿅 튀어나와요. 부위마다 모양은 [반응] 탭에서 골라요")+tile("o-pet",!t.petOff,"쓰다듬기 반응","그림 위에서 마우스를 좌우로 슥슥 문지르면 하트가 뿅뿅 올라오고 좋아해요")+'</div>'+
-      (t.petOff?"":'<label class="fld" style="margin-top:12px">쓰다듬은 뒤 할 말 <span class="note" style="font-weight:400">· 한 줄에 하나, 비워 두면 기본 대사</span><textarea class="in" id="pet-lines" rows="3" placeholder="헤헤, 좋다~&#10;간지러워!">'+esc((t.petLines||[]).join("\n"))+'</textarea></label>')+'</div>'+
+      (t.petOff?"":'<div class="lbl" style="margin-top:12px">쓰다듬을 때 뜨는 것</div><div class="chips">'+(Z.PETFX||[]).map(function(f){ return '<button data-act="petshape" data-v="'+f[0]+'" class="'+((t.petShape||"heart")===f[0]?"on":"")+'">'+f[1]+'</button>'; }).join("")+'</div>'+
+        '<div class="lbl" style="margin-top:10px">색</div><div class="chips pet-cols">'+[["","기본"],["#ff7fa8",""],["#ff5c5c",""],["#ffb347",""],["#ffd34d",""],["#7bd389",""],["#5bc0eb",""],["#7b8cff",""],["#b77bff",""],["#1d2433",""]].map(function(c){ var on=(t.petColor||"")===c[0]; return c[1]?'<button data-act="petcol" data-v="" class="'+(on?"on":"")+'">기본</button>':'<button data-act="petcol" data-v="'+c[0]+'" class="pc'+(on?" on":"")+'" style="--c:'+c[0]+'" aria-label="'+c[0]+'"></button>'; }).join("")+'<label class="pc pc-any" title="직접 고르기"><input type="color" id="pet-col" value="'+esc(t.petColor||"#ff7fa8")+'"></label><button class="lnk" data-act="petprev" style="margin-left:6px">미리 보기</button></div>'+
+        '<label class="fld" style="margin-top:12px">쓰다듬은 뒤 할 말 <span class="note" style="font-weight:400">· 한 줄에 하나, 비워 두면 기본 대사</span><textarea class="in" id="pet-lines" rows="3" placeholder="헤헤, 좋다~&#10;간지러워!">'+esc((t.petLines||[]).join("\n"))+'</textarea></label>')+'</div>'+
     '<div class="box" id="lg-'+LGSEL+'"><div class="box-t">대사<button class="btn" data-act="poke" style="margin-left:auto;height:30px;font-size:12px">말 걸어 보기</button></div>'+tabs+
     '<p class="note" style="margin:10px 0 8px">'+esc(cur[3]||(cur[1]+" 하는 말이에요."))+' 한 칸에 한 마디. 가운데 <b>//</b> 를 넣으면 두 번에 나눠 말해요.</p>'+
     '<div class="lines">'+rows+'<button class="addln" data-lnadd="'+LGSEL+'">＋ 한 마디 더</button></div></div>';
@@ -548,6 +550,8 @@ function ttHTML(k){
 }
 function trRun(){ if(!api.trackRunning) { TRRUN=[]; return; } api.trackRunning().then(function(r){ TRRUN=Array.isArray(r)?r.sort(function(a,b){ return String(a.name).localeCompare(String(b.name),"ko"); }):[]; if(VIEW==="track") render(); }).catch(function(){ TRRUN=[]; if(VIEW==="track") render(); }); }
 function trAdd(exe,name){ if(!TRD||!exe) return; var ap=(TRD.apps||[]).slice(); if(ap.some(function(a){ return a.exe.toLowerCase()===String(exe).toLowerCase(); })) return; ap.push({exe:exe,label:name||String(exe).replace(/\.exe$/i,""),color:trColor(ap.length)}); TRPICK=false; trSetApps(ap); }
+/* 쓰다듬기 효과 미리 보기: 버튼 근처에서 뿅뿅 */
+function petPrev(){ var t=cur(), host=$(".pet-cols"); if(!t||!host||!Z.hearts) return; host.style.position="relative"; for(var i=0;i<6;i++) setTimeout(function(){ Z.hearts(host,host.offsetWidth*.5,0,220,1,{color:t.petColor,shape:t.petShape}); },i*120); }
 function trSetApps(apps){ TRD.apps=apps; api.trackSet("apps",apps).then(trLoad); render(); }
 function setView(){
   var c=S.settings||{}, th=c.theme||"system";
@@ -1066,6 +1070,8 @@ app.addEventListener("click",function(e){
     return; }
   if(a==="ob-open"){ OBOPEN=true; render(); var on=$("#ob-name"); if(on) on.focus(); return; }
   if(a==="celeb"){ var cx=AN.upcoming(S).filter(function(x){ return x.n.days===0&&x.a.id===b.dataset.ann; })[0]; if(cx) showCeleb(cx.a,cx.n); return; }
+  if((a==="petshape"||a==="petcol")&&cur()){ var tp=cur(); if(a==="petshape") tp.petShape=b.dataset.v; else tp.petColor=b.dataset.v||undefined; saveSoon(); render(); petPrev(); return; }
+  if(a==="petprev"){ petPrev(); return; }
   if(a==="agtab"){ AGTAB=b.dataset.t; try{ localStorage.setItem("dd-agtab",AGTAB); }catch(e){} render(); return; }
   if(a==="tradd"&&TRD){ trAdd(b.dataset.exe,b.dataset.name); return; }
   if(a==="trpick"){ TRPICK=true; TRQ=""; trRun(); render(); return; }
@@ -1098,6 +1104,7 @@ app.addEventListener("input",function(e){
   if(el.dataset.ln){ var a=el.dataset.ln.split("|"), arr=getLines(t,a[0]), p0=Z.parseLine(arr[+a[1]],lineDef(t,a[0])); arr[+a[1]]=p0.auto?el.value:Z.composeLine(p0.style,el.value); saveSoon(); return; }
   if(el.id==="b-y"||el.id==="b-x"){ t.bubblePos=t.bubblePos||{}; var bv=+el.value; t.bubblePos[el.id==="b-y"?"y":"x"]=bv; $("#"+el.id+"-v").textContent=el.id==="b-y"?bubLbl(bv,"위","아래"):bubLbl(bv,"오른쪽","왼쪽"); saveSoon(); clearTimeout(window._bubT); window._bubT=setTimeout(function(){ var tk=$("#zst .tok"); if(tk) say(tk,"여기쯤 떠요",false,t,"speech"); },120); return; }
   if(el.id==="bb-p"||el.id==="bb-s"){ if(el.id==="bb-p"){ t.babblePitch=+el.value; $("#bb-p-v").textContent=ptLbl(t.babblePitch); } else { t.babbleSpeed=(+el.value)/100; $("#bb-s-v").textContent=spLbl(t.babbleSpeed); } saveSoon(); clearTimeout(window._bbT); window._bbT=setTimeout(function(){ bbSample(t); },250); return; }
+  if(el.id==="pet-col"&&t){ t.petColor=el.value; saveSoon(); clearTimeout(petPrev._t); petPrev._t=setTimeout(petPrev,250); return; }
   if(el.id==="pet-lines"&&t){ t.petLines=el.value.split("\n").map(function(x){return x.trim()}).filter(Boolean); saveSoon(); return; }
   if(el.id==="z-split"){ t.zoneSplit=(+el.value)/100; $("#z-split-v").textContent=el.value+"%"; drawZones(); saveSoon(); return; }
   if(el.id==="z-split2"){ t.zoneSplit2=(+el.value)/100; $("#z-split2-v").textContent=el.value+"%"; drawZones(); saveSoon(); return; }

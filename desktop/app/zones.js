@@ -138,11 +138,19 @@ Z.spawn=function(host,x,y,kind,size){
   host.appendChild(el); setTimeout(function(){ el.remove(); },800);
 };
 /* 하트 뾰뾰뾰뿅: 작은 하트가 여러 개 흩어지며 올라가요 (쓰다듬기 · 하트 뿅뿅) */
-Z.hearts=function(host,x,y,size,n){
-  var s0=Math.max(12,Math.round((size||160)*.1)), cols=["#ff7fa8","#ffb3d0","#ff5c8a","#ffc6dc"];
+/* 쓰다듬기 효과 색: 고른 색 하나로 진하고 연한 네 가지를 만들어요 */
+function shades(hex){ var h=String(hex||"").replace("#",""); if(!/^[0-9a-f]{6}$/i.test(h)) return null; var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
+  var mix=function(t,w){ return "rgb("+[r,g,b].map(function(v){ return Math.round(t>0?v+(w-v)*t:v*(1+t)); }).join(",")+")"; };
+  return ["#"+h,mix(.45,255),mix(-.15),mix(.65,255)]; }
+var HEART='M12 21s-8.5-5.3-8.5-11.4A4.4 4.4 0 0112 7.5a4.4 4.4 0 018.5 2.1C20.5 15.7 12 21 12 21z', STAR='M12 2.6l2.75 6 6.55.65-4.93 4.37 1.43 6.43L12 16.7l-5.8 3.35 1.43-6.43L2.7 9.25l6.55-.65z';
+Z.PETFX=[["heart","하트"],["star","별"],["mix","하트 + 별"]];
+Z.hearts=function(host,x,y,size,n,opt){
+  opt=opt||{}; var s0=Math.max(12,Math.round((size||160)*.1)), cols=shades(opt.color)||["#ff7fa8","#ffb3d0","#ff5c8a","#ffc6dc"], sh=opt.shape||"heart";
+  if(sh!=="heart"&&!opt.color&&sh==="star") cols=["#ffd34d","#ffe58a","#ffb703","#fff0b3"];
   for(var i=0;i<(n||1);i++) (function(i){ setTimeout(function(){
     var s=Math.round(s0*(.7+Math.random()*.6)), el=document.createElement("div"); el.className="fxh";
-    el.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 21s-8.5-5.3-8.5-11.4A4.4 4.4 0 0112 7.5a4.4 4.4 0 018.5 2.1C20.5 15.7 12 21 12 21z" fill="'+cols[Math.floor(Math.random()*cols.length)]+'" stroke="#fff" stroke-width="1.6"/></svg>';
+    var star=sh==="star"||(sh==="mix"&&Math.random()<.5), col=star&&sh==="mix"&&!opt.color?["#ffd34d","#ffe58a","#ffb703"][Math.floor(Math.random()*3)]:cols[Math.floor(Math.random()*cols.length)];
+    el.innerHTML='<svg viewBox="0 0 24 24"><path d="'+(star?STAR:HEART)+'" fill="'+col+'" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
     el.style.cssText="left:"+(x-s/2+(Math.random()-.5)*s*1.6)+"px;top:"+(y-s/2+(Math.random()-.5)*s*.6)+"px;width:"+s+"px;height:"+s+"px;--dx:"+((Math.random()-.5)*s*2.4).toFixed(0)+"px;--r:"+((Math.random()*2-1)*22).toFixed(0)+"deg";
     host.appendChild(el); setTimeout(function(){ el.remove(); },1100);
   },i*90); })(i);
