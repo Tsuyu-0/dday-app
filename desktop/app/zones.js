@@ -300,9 +300,12 @@ Z.sound=function(kind,vol,src){
   else if(Z.SOUND_OLD[kind]) Z.sound(Z.SOUND_OLD[kind],vol);
 };
 /* 웅얼 말소리 (동물 마을 같은 말투) */
-Z.VOICES=[["none","없음"],["high","높은 톤"],["mid","중간 톤"],["low","낮은 톤"],["whisper","속삭임"],["round","통통"],["mono","단조 삑"],["robot","로봇"],["beep","삐빅"],["chip","8비트"],["radio","무전기"],["deep","낮은 기계음"],["typer","타자기"]];
+Z.VOICES=[["none","없음"],["high","높은 톤"],["mid","중간 톤"],["low","낮은 톤"],["whisper","속삭임"],["round","통통"],["animal","동글동글 웅얼"],["animal2","폭신 웅얼"],["mono","단조 삑"],["robot","로봇"],["beep","삐빅"],["chip","8비트"],["radio","무전기"],["deep","낮은 기계음"],["typer","타자기"]];
 var VF=[[800,1200],[600,1800],[800,1300],[600,1800],[600,1000],[500,1900],[600,1100],[500,1900],[450,800],[750,1150],[600,1700],[450,1700],[450,850],[350,800],[550,1000],[450,1700],[300,1900],[350,850],[350,1300],[330,1800],[300,2200]];
 var VP={high:{b:440,k:1.15,o:"triangle",g:.62},mid:{b:300,k:1,o:"square",g:.42},low:{b:185,k:.9,o:"square",g:.4},whisper:{b:250,k:1,o:"sine",g:.17,soft:true},round:{b:350,k:1.05,o:"triangle",g:.7},
+  /* 동물 마을 같은 웅얼 말투: 글자마다 자음(톡 · 쓰 · 음) + 모음 색이 들어간 빠르고 귀여운 목소리 */
+  animal:{animal:1,b:420,k:1.32,g:.62},
+  animal2:{animal:1,b:260,k:1.12,g:.68,soft:1},
   /* 기계음: 글자마다 같은 높이로 또각또각 (모음 색은 안 섞어요) */
   mono:{mech:1,b:520,o:"square",g:.13,d:.038,mono:1},
   robot:{mech:1,b:150,o:"square",g:.08,d:.07,mono:1,ring:68,lp:2400},
@@ -328,6 +331,38 @@ function mechBlip(c,out,f0,t0,dur,vp,loud){
   if(vp.crackle){ var ns=c.createBufferSource(); ns.buffer=noise(c); var nf=c.createBiquadFilter(); nf.type="bandpass"; nf.frequency.value=2500; nf.Q.value=.7; var ng=c.createGain(); ng.gain.value=.12; ns.connect(nf); nf.connect(ng); ng.connect(env); ns.start(t0,Math.random()*.5); ns.stop(t0+dur+.01); }
   env.gain.setValueAtTime(0.0001,t0); env.gain.exponentialRampToValueAtTime(pk,t0+.004); env.gain.setValueAtTime(pk,t0+dur*.7); env.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
   env.connect(out); o.start(t0); o.stop(t0+dur+.02);
+}
+/* 한글 한 글자 → 초성 종류 · 모음 · 받침 */
+var CHO_K=[1,1,3,1,1,4,3,1,1,2,2,0,1,1,1,1,1,1,5]; // 0 ㅇ 1 터지는 소리 2 ㅅ·ㅆ 3 ㄴ·ㅁ 4 ㄹ 5 ㅎ  (ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ)
+var CHO_F=[1800,1800,0,2600,2600,0,0,1200,1200,5200,5200,0,3800,3800,4200,2000,3000,1500,0];
+function jamo(ch){ var c=ch.charCodeAt(0);
+  if(c>=0xAC00&&c<=0xD7A3){ var o=c-0xAC00; return {cho:Math.floor(o/588),jung:Math.floor((o%588)/28),jong:o%28}; }
+  var l=ch.toLowerCase(), V={a:0,e:5,i:20,o:8,u:13,y:20}, C={b:7,c:14,d:3,f:17,g:0,h:18,j:12,k:15,l:5,m:6,n:2,p:17,q:15,r:5,s:9,t:16,v:7,w:11,x:9,z:12};
+  if(V[l]!=null) return {cho:11,jung:V[l],jong:0}; if(C[l]!=null) return {cho:C[l],jung:18,jong:0};
+  if(/[0-9]/.test(ch)) return {cho:16,jung:20,jong:0}; if(/[ㄱ-ㅎ]/.test(ch)) return {cho:Math.max(0,"ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ".indexOf(ch)),jung:18,jong:0};
+  if(/[ㅏ-ㅣ]/.test(ch)) return {cho:11,jung:ch.charCodeAt(0)-0x314F,jong:0}; return null; }
+function animalBlip(c,out,ch,f0,t0,dur,vp,loud,rise){
+  var j=jamo(ch); if(!j) return; var F=VF[j.jung]||[500,1500], F1=F[0]*vp.k, F2=F[1]*vp.k, k=CHO_K[j.cho], on=0, pk=vp.g*(loud?1.3:1);
+  /* 자음: 터지는 소리 톡 · ㅅ 쓰 · ㅎ 하 */
+  if(k===1||k===2||k===5){ var nl=k===1?.009:k===2?.022:.016; on=k===1?.006:k===2?.016:.01;
+    var ns=c.createBufferSource(); ns.buffer=noise(c); var nf=c.createBiquadFilter(); nf.type=k===2?"highpass":"bandpass"; nf.frequency.value=k===5?1400:(CHO_F[j.cho]||2500); nf.Q.value=k===2?.7:1.4;
+    var ng=c.createGain(), na=pk*(k===1?.55:k===2?.32:.25)*(vp.soft?.6:1); ng.gain.setValueAtTime(na,t0); ng.gain.exponentialRampToValueAtTime(0.0001,t0+nl);
+    ns.connect(nf); nf.connect(ng); ng.connect(out); ns.start(t0,Math.random()*.5); ns.stop(t0+nl+.01); }
+  /* 모음: 성대 소리(톱니) → 모음 색(포먼트 둘) */
+  var tv=t0+on, vd=Math.max(.025,dur-on)*(j.jong?.78:1), o=c.createOscillator(); o.type=vp.soft?"triangle":"sawtooth";
+  o.frequency.setValueAtTime(f0*(rise?.95:1.05),tv); o.frequency.linearRampToValueAtTime(f0*(rise?1.12:.93),tv+vd);
+  var mix=c.createGain(), env=c.createGain();
+  var b1=c.createBiquadFilter(); b1.type="bandpass"; b1.Q.value=5;
+  if(k===3){ b1.frequency.setValueAtTime(280*vp.k,tv); b1.frequency.linearRampToValueAtTime(F1,tv+.018); } else b1.frequency.value=F1;
+  var b2=c.createBiquadFilter(); b2.type="bandpass"; b2.Q.value=7;
+  if(k===4){ b2.frequency.setValueAtTime(1100*vp.k,tv); b2.frequency.linearRampToValueAtTime(F2,tv+.02); } else b2.frequency.value=F2;
+  var g1=c.createGain(), g2=c.createGain(), dry=c.createGain(); g1.gain.value=1.5; g2.gain.value=1.0; dry.gain.value=vp.soft?.18:.07;
+  o.connect(b1); b1.connect(g1); g1.connect(mix); o.connect(b2); b2.connect(g2); g2.connect(mix); o.connect(dry); dry.connect(mix);
+  env.gain.setValueAtTime(0.0001,tv); env.gain.exponentialRampToValueAtTime(pk,tv+.005); env.gain.setValueAtTime(pk,tv+vd*.6); env.gain.exponentialRampToValueAtTime(0.0001,tv+vd);
+  mix.connect(env); env.connect(out); o.start(tv); o.stop(tv+vd+.02);
+  /* 받침 ㄴ·ㅁ·ㅇ: 짧게 음~ */
+  if(j.jong===4||j.jong===16||j.jong===21){ var h=c.createOscillator(), hg=c.createGain(), hl=c.createBiquadFilter(); h.type="triangle"; h.frequency.value=f0*.97; hl.type="lowpass"; hl.frequency.value=700;
+    var te=tv+vd*.85; hg.gain.setValueAtTime(0.0001,te); hg.gain.exponentialRampToValueAtTime(pk*.5,te+.006); hg.gain.exponentialRampToValueAtTime(0.0001,te+.03); h.connect(hl); hl.connect(hg); hg.connect(out); h.start(te); h.stop(te+.04); }
 }
 function hsh(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
 function sylInfo(ch){ var c=ch.charCodeAt(0);
@@ -366,12 +401,13 @@ Z.typeOut=function(sp,text,voice,vol,style,opt){
   setTimeout(function step0(){ step(); },opt.delay||0);
   function step(){
     if((!opt.free&&!sp.isConnected)||k>=n){ sp.textContent=text; return; }
-    var ch=chars[k++]; paint(); var wait=44/spd;
+    var ch=chars[k++]; paint(); var wait=(vp&&vp.animal?62:44)/spd;
     var info=sylInfo(ch);
     if(info&&c&&vp){ var SC=[0,2,4,5,7,9,7,4], semi=SC[((seed>>>(sylN%24))+sylN*3)&7]-3, pos=total>1?sylN/(total-1):0; semi+=-1.5*pos; if(q&&sylN>=total-2) semi+=sylN===total-1?7:4; if(ex) semi+=2;
       if(vp.mech){ if(vp.mono) semi=(q&&sylN===total-1)?4:0; else if(vp.alt) semi=sylN%2?7:0; else if(vp.arp) semi=[0,4,7,12][sylN%4]+(q&&sylN===total-1?5:0); if(ex) semi+=2; }
       var f0=vp.b*Math.pow(2,(semi+pitch)/12)*(1+(Math.random()-.5)*(vp.mech?0:.02)), dur=(vp.mech?vp.d:(info.jong?.07:.055))/Math.sqrt(spd);
-      if(vp.mech) mechBlip(c,out,f0,c.currentTime+.004,dur,vp,ex); else blip(c,out,info,f0,c.currentTime+.004,dur,vp,ex); sylN++; }
+      if(vp.animal) animalBlip(c,out,ch,f0,c.currentTime+.004,(.05+(info.jong?.008:0))/spd,vp,ex,q&&sylN>=total-1);
+      else if(vp.mech) mechBlip(c,out,f0,c.currentTime+.004,dur,vp,ex); else blip(c,out,info,f0,c.currentTime+.004,dur,vp,ex); sylN++; }
     if(/[.,!?…~]/.test(ch)) wait=150/spd; else if(ch===" ") wait=24/spd;
     setTimeout(step,wait);
   }

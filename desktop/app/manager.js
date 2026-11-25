@@ -103,7 +103,7 @@ function addChooser(){
   w.addEventListener("click",function(e){ if(e.target===w){ w.remove(); return; } var b=e.target.closest("[data-c]"); if(!b) return; w.remove(); if(b.dataset.c==="new") newToken(); });
   w.addEventListener("change",function(e){ if(e.target.id!=="charimp2") return; var f=e.target.files[0]; if(!f) return; var fr=new FileReader(); fr.onload=function(){ w.remove(); importChar(String(fr.result)); }; fr.readAsText(f); });
 }
-function newToken(){ var t={id:uid("t"),kind:"img",name:"",nick:"",nameEn:"",color:"#5b6b80",img:null,parts:{},lines:[],idleLines:[],motion:{breathe:true},zones:{},birthday:null,desk:{size:160},babble:"mid",voice:"mix"}; S.tokens.push(t); if(!S.settings.main){ S.settings.main=t.id; setCfg("main",t.id); } SEL=t.id; VIEW="char"; SUB="art"; saveSoon(true); render(); setTimeout(function(){ var n=$(".nm-in"); if(n) n.focus(); },50); }
+function newToken(){ var t={id:uid("t"),kind:"img",name:"",nick:"",nameEn:"",color:"#5b6b80",img:null,parts:{},lines:[],idleLines:[],motion:{breathe:true},zones:{},birthday:null,desk:{size:160},babble:"animal",voice:"mix"}; S.tokens.push(t); if(!S.settings.main){ S.settings.main=t.id; setCfg("main",t.id); } SEL=t.id; VIEW="char"; SUB="art"; saveSoon(true); render(); setTimeout(function(){ var n=$(".nm-in"); if(n) n.focus(); },50); }
 function charView(){
   var t=tokById(SEL); if(!t) return '<div class="wrap"><div class="h1">캐릭터</div><p class="lead">왼쪽 아래 [＋ 캐릭터 추가]로 첫 캐릭터를 만들어 주세요.</p><div class="empty">아직 아무도 없어요.<br><button class="btn pri" data-act="new" style="margin-top:12px">＋ 캐릭터 추가</button></div></div>';
   var pk=pickNow(), isNow=pk&&pk.id===t.id, isMain=(S.settings||{}).main===t.id||(!tokById((S.settings||{}).main)&&S.tokens[0].id===t.id);

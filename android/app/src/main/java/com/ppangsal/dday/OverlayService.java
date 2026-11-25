@@ -258,16 +258,22 @@ public class OverlayService extends Service {
             bub.setScaleX(.6f); bub.setScaleY(.6f); bub.setAlpha(0f);
             bub.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).setInterpolator(new android.view.animation.OvershootInterpolator(2.2f)).start();
             if (!quiet) Babble.play(OverlayService.this, full, voice, vPitch, vSpeed, vVol);
-            final int step = Math.max(28, (int) (48 / Math.max(.5f, vSpeed)));
+            // 말소리와 같은 박자로 한 글자씩 (PC와 같아요)
+            final int[] at = Voice.schedule(full, vSpeed, voice);
+            final long t0 = android.os.SystemClock.uptimeMillis();
             final int[] k = { 0 };
             typer = new Runnable() { @Override public void run() {
-                k[0] = Math.min(full.length(), k[0] + 1);
-                android.text.SpannableString s2 = new android.text.SpannableString(full);
-                if (k[0] < full.length()) s2.setSpan(new android.text.style.ForegroundColorSpan(0x00000000), k[0], full.length(), 0);
-                bub.setText(s2);
-                if (k[0] < full.length()) h.postDelayed(this, step);
+                long el = android.os.SystemClock.uptimeMillis() - t0; int nk = k[0];
+                while (nk < full.length() && at[nk] <= el) nk++;
+                if (nk != k[0]) {
+                    k[0] = nk;
+                    android.text.SpannableString s2 = new android.text.SpannableString(full);
+                    if (k[0] < full.length()) s2.setSpan(new android.text.style.ForegroundColorSpan(0x00000000), k[0], full.length(), 0);
+                    bub.setText(s2);
+                }
+                if (k[0] < full.length()) h.postDelayed(this, 16);
             } };
-            h.postDelayed(typer, 120);
+            h.post(typer);
             if (hold > 0) { h.postDelayed(hideBub, hold); return; }
             long dur = Math.max(2600, 1200 + full.length() * 120L);
             if (!queue.isEmpty()) h.postDelayed(nextPart, Math.max(1500, 700 + full.length() * 90L));
@@ -403,6 +409,7 @@ public class OverlayService extends Service {
         final Pet p = pets.get(w);
         String text = ln[1].replace("//", "\n");
         long ms = Math.min(4200, Math.max(1700, 900 + text.length() * 90L));
+        { int[] at = Voice.schedule(text, p.vSpeed, p.voice); ms = Math.min(9000, Math.max(ms, at[text.length()] + 1100L)); } // 글자가 다 나온 뒤 조금 더 보여 줘요
         for (Pet o : pets) if (o != p) o.lean(p.idx > o.idx ? 1 : -1, ms + 400);
         int dir = w == 0 ? 1 : (w == pets.size() - 1 ? -1 : (rnd.nextBoolean() ? 1 : -1));
         p.motion(ln[2].isEmpty() ? null : ln[2], dir);
