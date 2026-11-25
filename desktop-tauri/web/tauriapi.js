@@ -22,7 +22,8 @@
 
   /* 캐릭터 창: 그림 위에 있을 때만 마우스를 받고, 나머지는 바탕화면으로 통과.
      통과 중에는 마우스 움직임이 안 들어와서 커서 위치를 조금씩 확인해 대신 알려 줘요. */
-  var ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0, walkUntil = 0;
+  var ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0, walkUntil = 0, bnd = null, dragCur = null;
+  function moveClamp(x, y) { var hit = 0; if (bnd) { if (x < bnd.x0) { x = bnd.x0; hit = 1; } else if (x > bnd.x1) { x = bnd.x1; hit = 2; } if (y < bnd.y0) { y = bnd.y0; hit = hit || 3; } else if (y > bnd.y1) { y = bnd.y1; hit = hit || 4; } } dragCur = { x: x, y: y }; win.setPosition(new LPos(Math.round(x), Math.round(y))).catch(function () {}); return hit; }
   function refreshPos() { return Promise.all([win.outerPosition(), win.scaleFactor()]).then(function (r) { k = r[1] || 1; pos = { x: r[0].x, y: r[0].y }; posT = Date.now(); }).catch(function () {}); }
   function setIgnore(v) { v = !!v; if (v === ignoring) return; ignoring = v; win.setIgnoreCursorEvents(v).catch(function () {}); }
   function poll() {
@@ -87,13 +88,27 @@
     nudge: function (dir) { Promise.all([win.outerPosition(), win.scaleFactor()]).then(function (r) { var x0 = r[0].x, y0 = r[0].y, dist = 26 * (r[1] || 1) * (dir >= 0 ? 1 : -1), t0 = Date.now(), PP = DPI.PhysicalPosition;
       (function f() { var t = (Date.now() - t0) / 700; if (t >= 1) { win.setPosition(new PP(x0, y0)).catch(function () {}); return; } win.setPosition(new PP(Math.round(x0 + dist * Math.sin(t * Math.PI)), y0)).catch(function () {}); setTimeout(f, 30); })(); }).catch(function () {}); },
     petIgnore: function (v) { if (!dragFrom) setIgnore(v); },
-    petDragStart: function () { setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; }); },
-    petDrag: function (dx, dy) { if (dragFrom) win.setPosition(new LPos(Math.round(dragFrom.x + dx), Math.round(dragFrom.y + dy))).catch(function () {}); },
+    petDragStart: function (inset) { inset = inset || 0; setIgnore(false); refreshPos().then(function () { dragFrom = { x: pos.x / k, y: pos.y / k }; dragCur = { x: dragFrom.x, y: dragFrom.y }; });
+      window.api.walkInfo().then(function (I) { var s = I.sf || 1; bnd = { x0: I.ax / s - inset, x1: (I.ax + I.aw - I.w) / s + inset, y0: I.ay / s - I.h / s * .45, y1: (I.ay + I.ah - I.h) / s }; }).catch(function () { bnd = null; }); },
+    /* 끌기: 화면 밖으로는 못 나가요. 벽에 닿으면 어느 쪽인지 돌려줘요 (1 왼쪽 2 오른쪽 3 위 4 아래) */
+    petDrag: function (dx, dy) { if (!dragFrom) return 0; return moveClamp(dragFrom.x + dx, dragFrom.y + dy); },
     petDragEnd: function () { dragFrom = null; refreshPos(); send("pet:dragend"); },
+    /* 던지기: 놓는 순간의 빠르기로 미끄러지다가 벽에 부딪히면 onHit(쪽) */
+    petThrow: function (vx, vy, onHit, onEnd) {
+      var cx = dragCur ? dragCur.x : pos.x / k, cy = dragCur ? dragCur.y : pos.y / k, t0 = performance.now(), last = t0, hits = 0;
+      dragFrom = { x: 0, y: 0 };
+      (function f(now) {
+        var dt = Math.min(40, now - last); last = now; vx *= Math.pow(.992, dt); vy *= Math.pow(.992, dt);
+        cx += vx * dt; cy += vy * dt; var h = moveClamp(cx, cy);
+        if (h) { if (h <= 2) { vx = -vx * .35; } else { vy = -vy * .35; } cx = dragCur.x; cy = dragCur.y; if (hits++ < 2 && onHit) onHit(h); }
+        if (Math.abs(vx) + Math.abs(vy) > .05 && now - t0 < 1500) requestAnimationFrame(f);
+        else { dragFrom = null; refreshPos(); send("pet:dragend"); if (onEnd) onEnd(); }
+      })(t0);
+    },
     /* 돌아다니기: 창 위치 · 화면 작업 영역(작업 표시줄 뺀 곳)을 실제 픽셀로 */
     walkInfo: function () { return Promise.all([win.outerPosition(), win.outerSize(), win.scaleFactor(), T.window.currentMonitor()]).then(function (r) {
       var m = r[3] || {}, wa = m.workArea || { position: m.position || { x: 0, y: 0 }, size: m.size || { width: 1920, height: 1080 } };
-      return { x: r[0].x, y: r[0].y, w: r[1].width, h: r[1].height, sf: r[2] || 1, ax: wa.position.x, aw: wa.size.width }; }); },
+      return { x: r[0].x, y: r[0].y, w: r[1].width, h: r[1].height, sf: r[2] || 1, ax: wa.position.x, aw: wa.size.width, ay: wa.position.y, ah: wa.size.height }; }); },
     walkMove: function (fromX, toX, y, ms) { walkUntil = Date.now() + ms + 300; return T.core.invoke("walk_move", { fromX: fromX, toX: toX, y: y, ms: Math.round(ms) }).catch(function () {}); },
     walkStop: function () { walkUntil = 0; refreshPos(); return T.core.invoke("walk_stop").catch(function () {}); },
     walkSetX: function (x, y) { var PP = DPI.PhysicalPosition; pos = { x: Math.round(x), y: y }; posT = Date.now(); return win.setPosition(new PP(Math.round(x), y)).catch(function () {}); },

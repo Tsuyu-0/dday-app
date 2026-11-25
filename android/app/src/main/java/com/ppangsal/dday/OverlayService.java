@@ -89,7 +89,7 @@ public class OverlayService extends Service {
         ObjectAnimator breathe;
         String name = "", greet = "", voice = "", zmap = "";
         float vPitch = 0, vSpeed = 1, vVol = .6f;
-        final List<String> lines = new ArrayList<>(), idle = new ArrayList<>();
+        final List<String> lines = new ArrayList<>(), idle = new ArrayList<>(), bumpLines = new ArrayList<>();
         final Map<String, List<String>> zoneLines = new HashMap<>();
         boolean idleVoice = false;
         final List<String> queue = new ArrayList<>(); boolean qQuiet = false;
@@ -163,7 +163,7 @@ public class OverlayService extends Service {
         View.OnTouchListener touch() {
             final int slop = ViewConfiguration.get(OverlayService.this).getScaledTouchSlop();
             return new View.OnTouchListener() {
-                float sx, sy, lx, ly; int ox, oy; boolean drag, longed;
+                float sx, sy, lx, ly; int ox, oy; boolean drag, longed; android.view.VelocityTracker vt;
                 final Runnable lpress = () -> { longed = true; showMenu(); };
                 @Override public boolean onTouch(View v, MotionEvent e) {
                     switch (e.getActionMasked()) {
@@ -171,16 +171,27 @@ public class OverlayService extends Service {
                             stopWalk(); touching = true; quietUntil = System.currentTimeMillis() + 5000;
                             lx = e.getX() / Math.max(1, v.getWidth()); ly = e.getY() / Math.max(1, v.getHeight());
                             sx = e.getRawX(); sy = e.getRawY(); ox = gx; oy = gy; drag = false; longed = false;
+                            stopFling(); if (vt != null) vt.recycle(); vt = android.view.VelocityTracker.obtain(); vt.addMovement(e);
                             h.postDelayed(lpress, 550); return true;
                         case MotionEvent.ACTION_MOVE:
                             float dx = e.getRawX() - sx, dy = e.getRawY() - sy;
-                            if (!drag && Math.abs(dx) + Math.abs(dy) > slop) { drag = true; h.removeCallbacks(lpress); for (Pet p : pets) p.hideMenu(); }
-                            if (drag) { gx = Math.round(ox + dx); gy = Math.round(oy - dy); for (Pet p : pets) p.move(); } // 같이 서 있는 친구들도 함께 옮겨요
+                            if (vt != null) vt.addMovement(e);
+                            if (!drag && Math.abs(dx) + Math.abs(dy) > slop) { drag = true; h.removeCallbacks(lpress); for (Pet p : pets) p.hideMenu(); hangStart(); }
+                            if (drag) { // 같이 서 있는 친구들도 함께 옮겨요. 화면 끝에 닿으면 "아야!"
+                                int side = moveGroup(Math.round(ox + dx), Math.round(oy - dy));
+                                if (side != 0) bump(Pet.this, side, false);
+                                if (vt != null) { vt.computeCurrentVelocity(1000); hangVx = vt.getXVelocity(); }
+                            }
                             return true;
                         case MotionEvent.ACTION_UP:
                         case MotionEvent.ACTION_CANCEL:
                             h.removeCallbacks(lpress); touching = false; quietUntil = System.currentTimeMillis() + 5000;
-                            if (drag) { keepInside(); prefsPos(); }
+                            if (drag) {
+                                float fvx = 0, fvy = 0; if (vt != null) { vt.addMovement(e); vt.computeCurrentVelocity(1000); fvx = vt.getXVelocity(); fvy = vt.getYVelocity(); }
+                                hangVx = 0;
+                                if (Math.hypot(fvx, fvy) > 1300) fling(Pet.this, fvx, -fvy); else { hangLand(); keepInside(); prefsPos(); }
+                            }
+                            if (vt != null) { vt.recycle(); vt = null; }
                             else if (!longed && e.getActionMasked() == MotionEvent.ACTION_UP) { hideMenu(); motion("hop"); say(pickFor(lx, ly)); tapped(Pet.this); }
                             return true;
                     }
@@ -318,6 +329,7 @@ public class OverlayService extends Service {
             if (zl != null) { Iterator<String> it = zl.keys(); while (it.hasNext()) { String k = it.next(); JSONArray a = zl.optJSONArray(k); List<String> L = new ArrayList<>(); if (a != null) for (int i = 0; i < a.length(); i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) L.add(x); } if (!L.isEmpty()) zoneLines.put(k, L); } }
             idleVoice = o.optBoolean("idleVoice", false);
             JSONArray il = o.optJSONArray("idle"); if (il != null) for (int i = 0; i < il.length(); i++) { String x = il.optString(i, "").trim(); if (!x.isEmpty()) idle.add(x); }
+            bumpLines.clear(); JSONArray bl = o.optJSONArray("bump"); if (bl != null) for (int i = 0; i < bl.length(); i++) { String x = bl.optString(i, "").trim(); if (!x.isEmpty()) bumpLines.add(x); }
             JSONArray ls = o.optJSONArray("lines"); if (ls != null) for (int i = 0; i < ls.length(); i++) { String x = ls.optString(i, "").trim(); if (!x.isEmpty()) lines.add(x); }
             greet = o.optString("greet", ""); name = o.optString("name", "");
             voice = o.optString("voice", ""); vPitch = (float) o.optDouble("pitch", 0); vSpeed = (float) o.optDouble("speed", 1); vVol = (float) o.optDouble("vol", .6);
@@ -416,6 +428,73 @@ public class OverlayService extends Service {
         p.sayOne(text, !duoVoice, ms);
         h.postDelayed(() -> step(gen, conv, k + 1), ms + 450);
     }
+
+    /* ---------- 들어 올리면 대롱대롱 · 벽에 부딪히면 "아야!" · 휙 던지기 ---------- */
+    float hangVx = 0, hangAng = 0, hangAv = 0; boolean hanging = false; long bumpAt = 0; ValueAnimator flinger;
+    /** 무리를 (x, y)로 옮겨요. 화면 끝에서 멈추고, 닿은 쪽을 돌려줘요 (1 왼쪽 2 오른쪽 3 위 4 아래) */
+    int moveGroup(int x, int y) {
+        DisplayMetrics m = dm(); int side = 0, maxX = m.widthPixels - groupW(), maxY = m.heightPixels - sizePx - dp(8);
+        if (x < 0) { x = 0; side = 1; } else if (x > maxX) { x = maxX; side = 2; }
+        if (y > maxY) { y = maxY; side = side != 0 ? side : 3; } else if (y < 0) { y = 0; side = side != 0 ? side : 4; }
+        gx = x; gy = y; for (Pet p : pets) p.move(); return side;
+    }
+    final Runnable hangTick = new Runnable() { @Override public void run() {
+        float tgt = hanging ? Math.max(-38f, Math.min(38f, -hangVx / 60f)) : 0f;
+        hangAv += (tgt - hangAng) * .09f; hangAv *= .86f; hangAng += hangAv;
+        for (Pet p : pets) p.img.setRotation(hangAng);
+        if (hanging || Math.abs(hangAng) > .15f || Math.abs(hangAv) > .05f) h.postDelayed(this, 16);
+        else for (Pet p : pets) { p.img.setRotation(0); p.img.setPivotY(sizePx); }
+    } };
+    void hangStart() {
+        hanging = true; stopWalk();
+        for (Pet p : pets) { if (p.breathe != null) p.breathe.pause(); p.img.setPivotX(sizePx / 2f); p.img.setPivotY(sizePx * .1f); p.img.animate().scaleX(.96f).scaleY(1.05f).translationY(-dp(4)).setDuration(160).start(); }
+        h.removeCallbacks(hangTick); h.post(hangTick);
+    }
+    void hangLand() {
+        hanging = false; h.removeCallbacks(hangTick); h.post(hangTick);
+        for (Pet p : pets) {
+            final Pet q = p;
+            q.img.animate().translationY(0).scaleX(1.08f).scaleY(.9f).setDuration(110).withEndAction(() -> {
+                q.img.animate().scaleX(1f).scaleY(1f).setDuration(260).setInterpolator(new android.view.animation.OvershootInterpolator(3f)).withEndAction(() -> { if (q.breathe != null && !hanging) q.breathe.resume(); }).start();
+            }).start();
+        }
+    }
+    /** 벽에 쿵: 납작해졌다가 "아야!" */
+    void bump(Pet who, int side, boolean hard) {
+        long now = System.currentTimeMillis(); if (now - bumpAt < 1300) return; bumpAt = now;
+        hangAv += (side == 1 ? 14 : side == 2 ? -14 : 0) * (hard ? 1.6f : 1f);
+        for (Pet p : pets) {
+            boolean sideHit = side <= 2;
+            ObjectAnimator sx = ObjectAnimator.ofFloat(p.img, "scaleX", p.img.getScaleX(), sideHit ? .82f : 1.12f, 1.04f, 1f);
+            ObjectAnimator sy = ObjectAnimator.ofFloat(p.img, "scaleY", p.img.getScaleY(), sideHit ? 1.08f : .84f, .97f, 1f);
+            sx.setDuration(420); sy.setDuration(420); sx.start(); sy.start();
+        }
+        String[] L = { "아야!", "으앗!", "아야야…", "쿵! 아파~", "벽이다…!" };
+        if (!who.bumpLines.isEmpty()) who.say("§s§" + who.bumpLines.get(rnd.nextInt(who.bumpLines.size())));
+        else who.say("§s§" + L[rnd.nextInt(L.length)]);
+    }
+    /** 휙 던지면: 미끄러지다가 벽에 부딪히면 튕기며 "아야!" */
+    void fling(final Pet who, float vx0, float vy0) {
+        stopFling();
+        final float[] v = { vx0 / 1000f, vy0 / 1000f }; final float[] p = { gx, gy }; final long[] last = { android.os.SystemClock.uptimeMillis() }; final int[] hits = { 0 };
+        flinger = ValueAnimator.ofFloat(0f, 1f); flinger.setDuration(1500);
+        flinger.addUpdateListener(a -> {
+            long now = android.os.SystemClock.uptimeMillis(); float dt = Math.min(40, now - last[0]); last[0] = now;
+            float dec = (float) Math.pow(.992, dt); v[0] *= dec; v[1] *= dec;
+            p[0] += v[0] * dt; p[1] += v[1] * dt; hangVx = v[0] * 1000f;
+            int side = moveGroup(Math.round(p[0]), Math.round(p[1]));
+            if (side != 0) { if (side <= 2) v[0] = -v[0] * .35f; else v[1] = -v[1] * .35f; p[0] = gx; p[1] = gy; if (hits[0]++ < 2) bump(who, side, true); }
+            if (Math.abs(v[0]) + Math.abs(v[1]) < .05f) a.cancel();
+        });
+        flinger.addListener(new android.animation.AnimatorListenerAdapter() {
+            boolean done = false;
+            void fin() { if (done) return; done = true; flinger = null; hangVx = 0; hangLand(); keepInside(); prefsPos(); }
+            @Override public void onAnimationEnd(android.animation.Animator a) { fin(); }
+            @Override public void onAnimationCancel(android.animation.Animator a) { fin(); }
+        });
+        flinger.start();
+    }
+    void stopFling() { if (flinger != null) flinger.cancel(); }
 
     /* 가로·세로를 바꾸거나 끌어다 놓으면: 다 같이 화면 안으로 */
     void keepInside() {

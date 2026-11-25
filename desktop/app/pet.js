@@ -100,6 +100,39 @@ function idleLoop(){
   },20000+Math.random()*40000);
 }
 
+/* ---------- 들어 올리면 대롱대롱 매달리고, 벽에 부딪히면 "아야!" ---------- */
+var Hang=(function(){
+  var on=false, ang=0, av=0, tgt=0, pts=[], raf=0, bumpT=0;
+  function el(){ return document.getElementById("inner"); }
+  function loop(){ var e=el(); if(!e){ raf=0; return; }
+    /* 진자처럼: 손이 움직이는 반대쪽으로 흔들렸다가 돌아와요 */
+    var now=performance.now(); pts=pts.filter(function(p){ return now-p[2]<90; });
+    var vx=pts.length>1?(pts[pts.length-1][0]-pts[0][0])/Math.max(16,now-pts[0][2]):0;
+    tgt=on?Math.max(-38,Math.min(38,-vx*26)):0;
+    av+=(tgt-ang)*.09; av*=.86; ang+=av;
+    e.style.rotate=ang.toFixed(2)+"deg";
+    if(on||Math.abs(ang)>.15||Math.abs(av)>.05) raf=requestAnimationFrame(loop); else { e.style.rotate=""; raf=0; }
+  }
+  function kick(){ if(!raf) raf=requestAnimationFrame(loop); }
+  return {
+    start:function(){ on=true; pts=[]; var e=el(); if(e){ e.style.transformOrigin="50% 10%"; e.style.transition="translate .18s, scale .18s"; e.style.translate="0 -6px"; e.style.scale="0.96 1.05"; }
+      stage.classList.add("m-hang"); W.quiet(4000); kick(); },
+    move:function(x,y){ pts.push([x,y,performance.now()]); kick(); },
+    release:function(){ var now=performance.now(), a=pts.filter(function(p){ return now-p[2]<80; }); on=false; kick();
+      if(a.length<2) return [0,0]; var p0=a[0], p1=a[a.length-1], dt=Math.max(16,p1[2]-p0[2]), sf=window.devicePixelRatio||1; return [(p1[0]-p0[0])/dt,(p1[1]-p0[1])/dt]; },
+    land:function(){ on=false; stage.classList.remove("m-hang"); var e=el(); if(e){ e.style.translate=""; e.style.scale=""; setTimeout(function(){ if(!on) e.style.transformOrigin=""; },600); }
+      stage.style.transition="scale .12s"; stage.style.scale="1.08 .9"; setTimeout(function(){ stage.style.transition="scale .25s cubic-bezier(.3,1.8,.5,1)"; stage.style.scale=""; },120); kick(); },
+    /* 벽에 쿵: 납작해졌다가 "아야!" (1 왼쪽 2 오른쪽 3 위 4 아래) */
+    bump:function(side,hard){ var now=Date.now(); if(now-bumpT<1300) return; bumpT=now;
+      av+=(side===1?14:side===2?-14:0)*(hard?1.6:1);
+      var e=el(); if(e){ var sx=side<=2?"0.82 1.08":"1.12 0.84"; e.animate([{scale:"1 1"},{scale:sx},{scale:"1.04 .97"},{scale:"1 1"}],{duration:420,easing:"ease-out"}); }
+      var sz=stage.offsetWidth; if(Z.spawn) try{ Z.spawn(stage,side===1?sz*.15:side===2?sz*.85:sz*.5,side===3?sz*.1:sz*.3,"star",sz); }catch(er){}
+      var c=T&&T._cfg||{}; if(!c.mute) Z.sound("wrap",(c.volume==null?.5:c.volume)*.7);
+      var L=(T&&T.bumpLines||[]).filter(Boolean); if(!L.length) L=["아야!","으앗!","아야야…","쿵! 아파~","벽이다…!"];
+      say("!"+L[Math.floor(Math.random()*L.length)],false); }
+  };
+})();
+
 /* 마우스: 그림 위에서만 잡히게 */
 var over=false, down=null, dragging=false;
 function through(){ return !(T&&T._cfg&&T._cfg.clickThrough===false); }
@@ -108,8 +141,8 @@ function hit(e){ return through()?!!zoneAt(e):true; }
 window.addEventListener("mousemove",function(e){
   if(down){
     var dx=e.screenX-down.x, dy=e.screenY-down.y;
-    if(!dragging&&!(T&&T.desk&&T.desk.lock)&&Math.abs(dx)+Math.abs(dy)>4){ dragging=true; api.petDragStart(); }
-    if(dragging) api.petDrag(dx,dy);
+    if(!dragging&&!(T&&T.desk&&T.desk.lock)&&Math.abs(dx)+Math.abs(dy)>4){ dragging=true; api.petDragStart(Math.max(0,(window.innerWidth-stage.offsetWidth)/2-4)); Hang.start(); }
+    if(dragging){ var hw=api.petDrag(dx,dy); Hang.move(e.screenX,e.screenY); if(hw) Hang.bump(hw); }
     return;
   }
   if(e.target.closest&&e.target.closest(".bb-help")){ if(!over){ over=true; api.petIgnore(false); } return; }
@@ -147,7 +180,7 @@ function petting(e){
 window.addEventListener("mousedown",function(e){ if(e.target.closest&&e.target.closest(".bb-help")) return; if(e.button!==0||!over) return; down={x:e.screenX,y:e.screenY,e:e}; dragging=false; });
 window.addEventListener("mouseup",function(e){
   if(e.button!==0||!down) return;
-  if(dragging) api.petDragEnd();
+  if(dragging){ var v=Hang.release(); if(api.petThrow&&Math.hypot(v[0],v[1])>.55) api.petThrow(v[0],v[1],function(h){ Hang.bump(h,true); },function(){ Hang.land(); }); else { api.petDragEnd(); Hang.land(); } }
   else { var p=norm(e); react(zoneAt(e)||"face",p[2],p[3]); if(api.petTapped) api.petTapped(); }
   down=null; dragging=false; setOver(hit(e));
 });

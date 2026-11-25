@@ -82,7 +82,7 @@ public class Voice {
             }
             if (ex) semi += 2;
             double f0 = sp.base * Math.pow(2, (semi + pitch) / 12.0) * (sp.mode == 0 && !animal ? 1 + (r.nextDouble() - .5) * .02 : 1);
-            if (animal) addAnimal(mix, off, j, f0, (.05 + (j[2] > 0 ? .008 : 0)) / spd, sp, ex, q && syl >= total - 1, r);
+            if (animal) addAnimal(mix, off, j, f0, (.05 + (j[2] > 0 ? .008 : 0)) * sp.df / spd, sp, ex, q && syl >= total - 1, r);
             else addBlip(mix, off, j, f0, (sp.fixDur > 0 ? sp.fixDur : (j[2] > 0 ? .07f : .055f)) / sq, sp, ex, r, type);
             syl++;
         }
@@ -92,13 +92,16 @@ public class Voice {
         return out;
     }
 
-    static final class Spec { float base, gain, fixDur, ring, crackle, lp, k = 1; int wave, mode; boolean soft; }
+    static final class Spec { float base, gain, fixDur, ring, crackle, lp, k = 1, df = 1; int wave, mode; boolean soft; }
     static Spec spec(String type) {
         Spec s = new Spec();
         // wave: 0 사인 1 세모 2 네모 3 얇은 네모(8비트) 4 톱니 5 딸깍 / mode: 0 웅얼 1 같은 높이 2 번갈아 3 도미솔도
         switch (type) {
-            case "animal": s.base = 420; s.k = 1.32f; s.gain = .62f; break;
-            case "animal2": s.base = 260; s.k = 1.12f; s.gain = .68f; s.soft = true; break;
+            case "animal": s.base = 540; s.k = 1.42f; s.gain = .62f; break;
+            case "animal3": s.base = 720; s.k = 1.62f; s.gain = .55f; break;
+            case "animal4": s.base = 480; s.k = 1.36f; s.gain = .6f; s.df = .8f; break;
+            case "animal2": s.base = 370; s.k = 1.24f; s.gain = .68f; s.soft = true; break;
+            case "animal5": s.base = 310; s.k = 1.2f; s.gain = .62f; break;
             case "high": s.base = 440; s.wave = 1; s.gain = .55f; s.k = 1.15f; break;
             case "low": s.base = 185; s.wave = 2; s.gain = .42f; s.k = .9f; break;
             case "whisper": s.base = 250; s.wave = 0; s.gain = .30f; break;

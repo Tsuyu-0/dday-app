@@ -300,12 +300,15 @@ Z.sound=function(kind,vol,src){
   else if(Z.SOUND_OLD[kind]) Z.sound(Z.SOUND_OLD[kind],vol);
 };
 /* 웅얼 말소리 (동물 마을 같은 말투) */
-Z.VOICES=[["none","없음"],["high","높은 톤"],["mid","중간 톤"],["low","낮은 톤"],["whisper","속삭임"],["round","통통"],["animal","동글동글 웅얼"],["animal2","폭신 웅얼"],["mono","단조 삑"],["robot","로봇"],["beep","삐빅"],["chip","8비트"],["radio","무전기"],["deep","낮은 기계음"],["typer","타자기"]];
+Z.VOICES=[["none","없음"],["high","높은 톤"],["mid","중간 톤"],["low","낮은 톤"],["whisper","속삭임"],["round","통통"],["animal","동글동글"],["animal3","삐약삐약"],["animal4","새침"],["animal2","폭신"],["animal5","씩씩"],["mono","단조 삑"],["robot","로봇"],["beep","삐빅"],["chip","8비트"],["radio","무전기"],["deep","낮은 기계음"],["typer","타자기"]];
 var VF=[[800,1200],[600,1800],[800,1300],[600,1800],[600,1000],[500,1900],[600,1100],[500,1900],[450,800],[750,1150],[600,1700],[450,1700],[450,850],[350,800],[550,1000],[450,1700],[300,1900],[350,850],[350,1300],[330,1800],[300,2200]];
 var VP={high:{b:440,k:1.15,o:"triangle",g:.62},mid:{b:300,k:1,o:"square",g:.42},low:{b:185,k:.9,o:"square",g:.4},whisper:{b:250,k:1,o:"sine",g:.17,soft:true},round:{b:350,k:1.05,o:"triangle",g:.7},
   /* 동물 마을 같은 웅얼 말투: 글자마다 자음(톡 · 쓰 · 음) + 모음 색이 들어간 빠르고 귀여운 목소리 */
-  animal:{animal:1,b:420,k:1.32,g:.62},
-  animal2:{animal:1,b:260,k:1.12,g:.68,soft:1},
+  animal:{animal:1,b:540,k:1.42,g:.62},
+  animal3:{animal:1,b:720,k:1.62,g:.55},
+  animal4:{animal:1,b:480,k:1.36,g:.6,df:.8},
+  animal2:{animal:1,b:370,k:1.24,g:.68,soft:1},
+  animal5:{animal:1,b:310,k:1.2,g:.62},
   /* 기계음: 글자마다 같은 높이로 또각또각 (모음 색은 안 섞어요) */
   mono:{mech:1,b:520,o:"square",g:.13,d:.038,mono:1},
   robot:{mech:1,b:150,o:"square",g:.08,d:.07,mono:1,ring:68,lp:2400},
@@ -406,7 +409,7 @@ Z.typeOut=function(sp,text,voice,vol,style,opt){
     if(info&&c&&vp){ var SC=[0,2,4,5,7,9,7,4], semi=SC[((seed>>>(sylN%24))+sylN*3)&7]-3, pos=total>1?sylN/(total-1):0; semi+=-1.5*pos; if(q&&sylN>=total-2) semi+=sylN===total-1?7:4; if(ex) semi+=2;
       if(vp.mech){ if(vp.mono) semi=(q&&sylN===total-1)?4:0; else if(vp.alt) semi=sylN%2?7:0; else if(vp.arp) semi=[0,4,7,12][sylN%4]+(q&&sylN===total-1?5:0); if(ex) semi+=2; }
       var f0=vp.b*Math.pow(2,(semi+pitch)/12)*(1+(Math.random()-.5)*(vp.mech?0:.02)), dur=(vp.mech?vp.d:(info.jong?.07:.055))/Math.sqrt(spd);
-      if(vp.animal) animalBlip(c,out,ch,f0,c.currentTime+.004,(.05+(info.jong?.008:0))/spd,vp,ex,q&&sylN>=total-1);
+      if(vp.animal) animalBlip(c,out,ch,f0,c.currentTime+.004,(.05+(info.jong?.008:0))*(vp.df||1)/spd,vp,ex,q&&sylN>=total-1);
       else if(vp.mech) mechBlip(c,out,f0,c.currentTime+.004,dur,vp,ex); else blip(c,out,info,f0,c.currentTime+.004,dur,vp,ex); sylN++; }
     if(/[.,!?…~]/.test(ch)) wait=150/spd; else if(ch===" ") wait=24/spd;
     setTimeout(step,wait);
