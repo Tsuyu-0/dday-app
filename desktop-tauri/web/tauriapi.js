@@ -22,7 +22,7 @@
 
   /* 캐릭터 창: 그림 위에 있을 때만 마우스를 받고, 나머지는 바탕화면으로 통과.
      통과 중에는 마우스 움직임이 안 들어와서 커서 위치를 조금씩 확인해 대신 알려 줘요. */
-  var ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0, walkUntil = 0, bnd = null, dragCur = null;
+  var far = 0, ignoring = null, pos = null, k = 1, dragFrom = null, posT = 0, walkUntil = 0, bnd = null, dragCur = null;
   /* 바닥: 작업 표시줄 위. 모니터 정보에 작업 영역이 없을 때(모니터 전체 크기만 올 때) 캐릭터가 작업 표시줄 뒤로 숨어 버려서,
      창이 있는 화면의 '쓸 수 있는 영역'(screen.avail*)으로 한 번 더 맞춰요 */
   function fixFloor() {
@@ -34,12 +34,15 @@
   function setIgnore(v) { v = !!v; if (v === ignoring) return; ignoring = v; win.setIgnoreCursorEvents(v).catch(function () {}); }
   function poll() {
     if (!/^pet/.test(me)) return;
-    setTimeout(poll, ignoring ? 70 : 250);
+    // 커서가 캐릭터 창에서 멀면 천천히, 가까우면 자주 확인해요 (가만히 둘 때 컴퓨터가 덜 일하게)
+    setTimeout(poll, !ignoring ? 250 : far > 6 ? 400 : far > 2 ? 180 : 70);
     if (!ignoring || dragFrom) return;
     var p = Date.now() - posT > 1500 || Date.now() < walkUntil ? refreshPos() : Promise.resolve();
     p.then(function () { return T.window.cursorPosition(); }).then(function (c) {
       if (!pos || !c) return;
       var x = (c.x - pos.x) / k, y = (c.y - pos.y) / k;
+      var dx = Math.max(0, -x, x - window.innerWidth), dy = Math.max(0, -y, y - window.innerHeight);
+      far = Math.max(dx, dy) > 260 ? far + 1 : 0;
       if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
       var el = document.elementFromPoint(x, y) || document.body;
       el.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: x, clientY: y, screenX: c.x / k, screenY: c.y / k }));

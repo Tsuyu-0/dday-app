@@ -46,10 +46,15 @@ pub fn start(dir: PathBuf) {
     let path = dir.join("track.json");
     let data = norm(fs::read_to_string(&path).ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or(json!({})));
     *ST.lock().unwrap() = Some(St { data, path, cur: None, seen: vec![], dirty: false, flushed: Instant::now() });
-    std::thread::spawn(|| loop {
+    let mut tick: u64 = 0;
+    std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(1));
-        let app = fg::front();
+        tick += 1;
+        // 가볍게: 자리를 비웠거나(입력 5초 없음) 잴 프로그램이 없으면 맨 앞 프로그램을 자주 묻지 않아요 (맥은 묻는 데 품이 들어서)
         let idle = fg::idle_ms();
+        let (has_apps, live) = match ST.lock() { Ok(g) => g.as_ref().map(|s| (s.data["apps"].as_array().map(|a| !a.is_empty()).unwrap_or(false), s.cur.is_some())).unwrap_or((false, false)), Err(_) => continue };
+        let app = if idle >= IDLE_MS { None } else if has_apps || tick % 5 == 0 { fg::front() } else { None };
+        if !has_apps && app.is_none() && !live { continue; }
         let mut g = match ST.lock() { Ok(g) => g, Err(_) => continue };
         let st = match g.as_mut() { Some(s) => s, None => continue };
         if let Some(a) = &app {

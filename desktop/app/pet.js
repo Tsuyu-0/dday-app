@@ -5,7 +5,7 @@ function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){retur
 var celebrated={};
 function render(t){
   var prev=T; T=t; if(!t) return;
-  var cfg=t._cfg||{};
+  var cfg=t._cfg||{}; document.body.classList.toggle("lite",!!cfg.lite);
   if(cfg.anniv&&cfg.anniv.days===0){ var key=cfg.day+"|"+cfg.anniv.id+"|"+t.id; if(!celebrated[key]){ celebrated[key]=1; setTimeout(celebrate,900); } }
   var size=(t.desk&&t.desk.size)||160; stage.style.width=stage.style.height=size+"px"; stage.classList.toggle("pxl",!!t.pixel);
   var flip=t.desk&&t.desk.flip?"scaleX(-1)":"none", inner;

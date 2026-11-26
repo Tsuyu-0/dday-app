@@ -521,7 +521,7 @@ function setView(){
     tile("s-pin",c.pinned!==false,"다른 창보다 위에","창을 열어도 캐릭터가 덮이지 않아요")+
     tile("s-through",c.clickThrough!==false,"그림 밖은 통과","캐릭터 주변을 눌러도 뒤의 창이 눌려요")+
     tile("s-hide",!!c.allHidden,"잠깐 다 숨기기","트레이 아이콘을 누르면 돌아와요")+
-    tile("s-login",c.launchAtLogin!==false,"컴퓨터 켜면 같이 시작","관리 창 없이 캐릭터만 떠요")+"</div></div>"+
+    tile("s-login",c.launchAtLogin!==false,"컴퓨터 켜면 같이 시작","관리 창 없이 캐릭터만 떠요")+tile("s-lite",!!c.lite,"가볍게 움직이기","숨쉬는 움직임을 멈춰서 컴퓨터가 덜 힘들어요")+"</div></div>"+
     '<div class="box"><div class="box-t">소리</div><div class="tiles" style="margin-bottom:12px">'+tile("s-mute",!!c.mute,"무음 모드","캐릭터를 눌러도 조용해요")+'</div><div class="lbl">누를 때 소리 크기</div><div class="slide"><input type="range" id="s-vol" min="0" max="100" value="'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'"><span class="val" id="s-vol-v">'+Math.round((typeof c.volume==="number"?c.volume:.5)*100)+'%</span></div><div class="lbl">말소리 크기</div><div class="slide"><input type="range" id="s-vvol" min="0" max="100" value="'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'"><span class="val" id="s-vvol-v">'+Math.round((typeof c.voiceVol==="number"?c.voiceVol:.6)*100)+'%</span></div><p class="note" style="margin-top:8px">어떤 소리가 날지는 캐릭터마다 [성격 · 대사]에서 골라요.</p></div>'+
     ovBox()+updBox()+fbBox()+
     '<div class="box"><div class="box-t">데이터</div><div class="btns"><button class="btn" data-act="backup">백업 파일 만들기</button><label class="btn">백업에서 되돌리기<input type="file" id="rf" accept=".json,application/json"></label><button class="btn" data-act="charexpall">캐릭터 전부 내보내기</button><label class="btn">캐릭터 불러오기<input type="file" id="charimp" accept=".ddchar,.json,application/json"></label><button class="btn ghost" data-act="folder">저장 폴더 열기</button></div></div>'+
@@ -916,6 +916,7 @@ function toggleTile(id){
     if(id==="o-shadow") t.desk.noShadow=!t.desk.noShadow; if(id==="o-flip") t.desk.flip=!t.desk.flip; if(id==="o-lock") t.desk.lock=!t.desk.lock; if(id==="o-br") t.motion.breathe=t.motion.breathe===false; if(id==="o-idlev") t.idleVoice=!t.idleVoice; if(id==="o-fx") t.fxOff=!t.fxOff; if(id==="o-pet") t.petOff=!t.petOff; if(id==="o-tilt"){ t.motion.idleTilt=!t.motion.idleTilt; if(t.motion.idleTilt){ var st0=$("#zst .stage"); if(st0) Z.idleTilt(st0); } } saveSoon(true); render(); return; }
   if(id==="k-clicker"||id==="k-img"){ t.kind=id==="k-img"?"img":"clicker"; saveSoon(true); render(); return; }
   if(id==="s-pin") setCfg("pinned",c.pinned===false);
+  if(id==="s-lite") setCfg("lite",!c.lite);
   if(id==="s-through") setCfg("clickThrough",c.clickThrough===false);
   if(id==="s-hide") setCfg("allHidden",!c.allHidden);
   if(id==="s-login") setCfg("launchAtLogin",c.launchAtLogin===false);

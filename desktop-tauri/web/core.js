@@ -138,7 +138,7 @@
     var pick = P[label] && P[label].pick;
     if (!pick) return null;
     var t = tok(pick.id); if (!t) return null;
-    var st = S.settings, extra = { clickThrough: st.clickThrough !== false, mute: !!st.mute, volume: typeof st.volume === "number" ? st.volume : 0.5, voiceVol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6, day: A.ymd(new Date()), duo: !!(P.pet.pick && P.pet2.pick) };
+    var st = S.settings, extra = { lite: !!st.lite, clickThrough: st.clickThrough !== false, mute: !!st.mute, volume: typeof st.volume === "number" ? st.volume : 0.5, voiceVol: typeof st.voiceVol === "number" ? st.voiceVol : 0.6, day: A.ymd(new Date()), duo: !!(P.pet.pick && P.pet2.pick) };
     if (pick.anniv) { var a = pick.anniv, n = pick.n; extra.anniv = { id: a.id, title: a.title, label: n.label, days: n.days, lines: (a.lines || []).filter(Boolean), def: A.defaultLine(S, a, n) }; }
     if (pick.event) extra.event = { id: pick.event.id, title: pick.event.title, time: pick.event.time || "" };
     extra.today = label === "pet" ? A.on(S, A.ymd(new Date())).events.map(function (e) { return { title: e.title, time: e.time || "" }; }) : [];
@@ -508,7 +508,7 @@
     if (k === "pinned") return setPinned(v);
     S.settings[k] = v; persist();
     if (k === "talkNow") { playTalk(v && typeof v === "object" && typeof v.i === "number" ? v.i : null); return; }
-    if (["allHidden", "clickThrough", "mute", "volume", "voiceVol", "main", "annivSwap", "annivLead", "duo"].indexOf(k) >= 0) syncPets();
+    if (["allHidden", "clickThrough", "lite", "mute", "volume", "voiceVol", "main", "annivSwap", "annivLead", "duo"].indexOf(k) >= 0) syncPets();
     if (k === "annivNotify") checkReminders();
     if (k === "launchAtLogin") applyLogin();
     if (k === "theme") applyTheme();
